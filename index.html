@@ -693,6 +693,34 @@ if ("serviceWorker" in navigator) {
 </section>
 
 <section id="herois" class="tab">
+  <div class="card" id="contaCard">
+    <h2>Minha Conta</h2>
+    <div id="contaLogado" style="display:none">
+      <p style="text-align:center; font-size:.9rem; margin-bottom:6px">Conectado como <b id="contaEmailTxt"></b></p>
+      <p id="contaSyncStatus" style="text-align:center; font-size:.78rem; color:var(--ink-soft); margin-bottom:10px">—</p>
+      <button class="gbtn ghost" style="width:100%; padding:9px 0" onclick="contaSair()">sair da conta</button>
+    </div>
+    <div id="contaDeslogado">
+      <p style="font-size:.8rem; color:var(--ink-soft); text-align:center; margin-bottom:10px">
+        Crie uma conta para manter seus heróis sincronizados entre o celular e o PC automaticamente.
+      </p>
+      <input type="email" id="contaEmailInp" placeholder="seu e-mail" autocomplete="email">
+      <input type="password" id="contaSenhaInp" placeholder="senha (mín. 6 caracteres)" autocomplete="current-password" style="margin-top:8px">
+      <div id="contaPerguntaWrap" style="display:none; margin-top:8px">
+        <label style="font-size:.72rem">Pergunta de segurança (para recuperar a senha sem e-mail)</label>
+        <input type="text" id="contaPerguntaInp" placeholder="ex.: nome do meu primeiro pet">
+        <label style="font-size:.72rem; margin-top:6px">Resposta</label>
+        <input type="text" id="contaRespostaInp" placeholder="a resposta">
+      </div>
+      <div class="row r2" style="margin-top:10px">
+        <button class="gbtn" style="padding:10px 0" onclick="contaEntrar()">entrar</button>
+        <button class="gbtn ghost" style="padding:10px 0" onclick="contaPrepararCriacao()">criar conta</button>
+      </div>
+      <button class="gbtn ghost" style="width:100%; padding:7px 0; margin-top:8px; font-size:.78rem" onclick="contaEsqueciSenha()">esqueci minha senha</button>
+    </div>
+    <div id="contaStatus" style="font-size:.78rem; color:var(--ink-soft); margin-top:8px; text-align:center; min-height:1.2em"></div>
+  </div>
+
   <button class="gbtn" style="width:100%; padding:12px" onclick="newChar()">＋ Criar novo personagem</button>
   <div id="rosterList" style="margin-top:14px"></div>
 
@@ -866,7 +894,7 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async ()=>{
     if(memoryOnly){ setSaveState("sem armazenamento — use “salvar backup”"); return; }
-    try{ if(S) S.up=Date.now(); await storSet(JSON.stringify(R)); setSaveState("salvo ✧",true); fbPushHero(); }
+    try{ if(S) S.up=Date.now(); await storSet(JSON.stringify(R)); setSaveState("salvo ✧",true); fbPushHero(); contaPush(); }
     catch(e){ setSaveState("falha ao salvar — tente de novo"); }
   },600);
   setSaveState("salvando...");
@@ -1560,6 +1588,160 @@ function wallRemover(){
   R.wall=""; applyWall(); save();
   setSaveState("wallpaper removido",true);
 }
+
+/* ================== minha conta (sincronização entre aparelhos) ================== */
+let contaUid=null, contaEmailAtual=null, contaUnsub=null, contaAplicandoRemota=false, contaPushTimer=null, contaLastTs=0;
+function contaStatus(t,ok){ const e=document.getElementById("contaStatus"); if(!e) return;
+  e.textContent=t; e.style.color=ok?"var(--gold)":"var(--ink-soft)"; }
+function contaAtualizarUI(){
+  const lg=document.getElementById("contaLogado"), de=document.getElementById("contaDeslogado");
+  if(!lg) return;
+  if(contaUid){ lg.style.display="block"; de.style.display="none";
+    document.getElementById("contaEmailTxt").textContent=contaEmailAtual||"";
+  }else{ lg.style.display="none"; de.style.display="block"; }
+}
+async function contaFbPronto(){
+  if(typeof firebase==="undefined") throw new Error("Firebase indisponível — verifique a conexão");
+  if(!fbApp){ const cfg=fbParseCfg(R.fb&&R.fb.cfg)||FB_CFG_PADRAO; fbApp=firebase.initializeApp(cfg); }
+  if(!fbDb) fbDb=firebase.firestore();
+}
+async function sha256hex(str){
+  const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function contaPrepararCriacao(){
+  const wrap=document.getElementById("contaPerguntaWrap");
+  const email=(document.getElementById("contaEmailInp").value||"").trim();
+  const senha=document.getElementById("contaSenhaInp").value||"";
+  if(!email||senha.length<6){ contaStatus("preencha e-mail e uma senha com 6+ caracteres"); return; }
+  if(wrap.style.display==="none"){
+    wrap.style.display="block";
+    contaStatus("defina sua pergunta de segurança e toque em 'criar conta' de novo");
+    document.getElementById("contaPerguntaInp").focus();
+    return;
+  }
+  contaCriarConta();
+}
+async function contaCriarConta(){
+  const email=(document.getElementById("contaEmailInp").value||"").trim();
+  const senha=document.getElementById("contaSenhaInp").value||"";
+  const pergunta=(document.getElementById("contaPerguntaInp").value||"").trim();
+  const resposta=(document.getElementById("contaRespostaInp").value||"").trim();
+  if(!email||senha.length<6){ contaStatus("preencha e-mail e uma senha com 6+ caracteres"); return; }
+  if(!pergunta||!resposta){ contaStatus("preencha a pergunta e a resposta de segurança"); return; }
+  try{
+    await contaFbPronto();
+    await firebase.auth().createUserWithEmailAndPassword(email,senha);
+    await fbDb.collection("recGrimorio").doc(email.toLowerCase()).set({
+      pergunta, resposta: await sha256hex(resposta.trim().toLowerCase())
+    });
+    contaStatus("conta criada ✧",true);
+  }catch(e){ contaStatus(contaErroTexto(e)); }
+}
+async function contaEntrar(){
+  const email=(document.getElementById("contaEmailInp").value||"").trim();
+  const senha=document.getElementById("contaSenhaInp").value||"";
+  if(!email||!senha){ contaStatus("preencha e-mail e senha"); return; }
+  try{
+    await contaFbPronto();
+    await firebase.auth().signInWithEmailAndPassword(email,senha);
+    contaStatus("entrando...",true);
+  }catch(e){ contaStatus(contaErroTexto(e)); }
+}
+async function contaEsqueciSenha(){
+  const email=(document.getElementById("contaEmailInp").value||"").trim();
+  if(!email){ contaStatus("digite seu e-mail acima primeiro"); return; }
+  try{
+    await contaFbPronto();
+    if(!firebase.auth().currentUser) await firebase.auth().signInAnonymously();
+    const doc=await fbDb.collection("recGrimorio").doc(email.toLowerCase()).get();
+    if(!doc.exists){
+      // conta antiga sem pergunta cadastrada: cai no e-mail direto
+      await firebase.auth().sendPasswordResetEmail(email);
+      contaStatus("essa conta não tem pergunta de segurança — enviei o link por e-mail ✧",true);
+      return;
+    }
+    const d=doc.data();
+    const resp=prompt("Pergunta de segurança: "+d.pergunta+"\n\nSua resposta:");
+    if(resp===null){ contaStatus(""); return; }
+    if((await sha256hex(resp.trim().toLowerCase()))!==d.resposta){ contaStatus("resposta incorreta"); return; }
+    await firebase.auth().sendPasswordResetEmail(email);
+    contaStatus("✦ resposta certa! Enviei o link de redefinição para o seu e-mail",true);
+  }catch(e){ contaStatus(contaErroTexto(e)); }
+}
+function contaSair(){
+  if(contaUnsub){ try{contaUnsub();}catch(e){} contaUnsub=null; }
+  firebase.auth().signOut();
+}
+function contaErroTexto(e){
+  const c=e&&e.code||"";
+  if(c.includes("email-already-in-use")) return "esse e-mail já tem conta — toque em 'entrar'";
+  if(c.includes("wrong-password")||c.includes("invalid-credential")) return "senha incorreta";
+  if(c.includes("user-not-found")) return "não achei essa conta — toque em 'criar conta'";
+  if(c.includes("weak-password")) return "senha muito fraca (mín. 6 caracteres)";
+  if(c.includes("invalid-email")) return "e-mail inválido";
+  return "erro: "+(e&&e.message||"tente de novo");
+}
+function contaMontarPayload(){
+  const copia=JSON.parse(JSON.stringify(R));
+  delete copia.wall; delete copia.wallDim; delete copia.fb;   // itens locais do aparelho, não sincronizam
+  return copia;
+}
+function contaPush(){
+  if(!contaUid||contaAplicandoRemota) return;
+  clearTimeout(contaPushTimer);
+  contaPushTimer=setTimeout(async()=>{
+    try{
+      const dados=JSON.stringify(contaMontarPayload());
+      if(dados.length>900000){ contaStatus("seus dados cresceram demais para sincronizar — apague heróis antigos ou anotações longas"); return; }
+      contaLastTs=Date.now();
+      await fbDb.collection("contasGrimorio").doc(contaUid).set({dados, ts:contaLastTs});
+      contaStatus("sincronizado ✧ agora",true);
+    }catch(e){ contaStatus("falha ao sincronizar — tentando de novo em breve"); }
+  },1500);
+}
+function contaAplicarNuvem(dados){
+  contaAplicandoRemota=true;
+  const wall=R.wall, wallDim=R.wallDim, fb=R.fb;
+  R={...R, ...dados, wall, wallDim, fb};
+  if(!R.chars||!R.chars.length) R.chars=[blankEntry()];
+  S=R.chars.find(c=>c.id===R.currentId)||R.chars[0]; R.currentId=S.id;
+  renderAll(); save();
+  contaAplicandoRemota=false;
+  contaStatus("dados atualizados de outro aparelho ✧",true);
+}
+async function contaAoLogar(user){
+  contaUid=user.uid; contaEmailAtual=user.email;
+  contaAtualizarUI();
+  contaStatus("conectando...");
+  try{
+    await contaFbPronto();
+    const doc=await fbDb.collection("contasGrimorio").doc(contaUid).get();
+    if(doc.exists && doc.data().dados){
+      contaAplicarNuvem(JSON.parse(doc.data().dados));
+    }else{
+      contaPush();   // primeira vez: envia o que já existe neste aparelho
+    }
+    contaUnsub=fbDb.collection("contasGrimorio").doc(contaUid).onSnapshot(d=>{
+      const v=d.data(); if(!v||!v.dados) return;
+      if(v.ts===contaLastTs) return;   // eco do que este aparelho acabou de enviar
+      contaAplicarNuvem(JSON.parse(v.dados));
+    });
+    contaStatus("✦ sincronizado entre seus aparelhos",true);
+  }catch(e){ contaStatus("falha ao sincronizar: "+(e.message||"")); }
+}
+(function contaAuthWatch(){
+  const tentar=()=>{
+    if(typeof firebase==="undefined"){ setTimeout(tentar,800); return; }
+    contaFbPronto().then(()=>{
+      firebase.auth().onAuthStateChanged(user=>{
+        if(user && user.email){ contaAoLogar(user); }
+        else{ contaUid=null; contaEmailAtual=null; contaAtualizarUI(); }
+      });
+    }).catch(()=>{});
+  };
+  if(document.readyState!=="loading") tentar(); else document.addEventListener("DOMContentLoaded",tentar);
+})();
 
 /* ================== mesa online (Firebase) ================== */
 const FB_CFG_PADRAO={apiKey:"AIzaSyDHi6kej7Nmhv_u932lzRqfOXeW2j79cS8",authDomain:"mesa-dnd-8076d.firebaseapp.com",projectId:"mesa-dnd-8076d",storageBucket:"mesa-dnd-8076d.firebasestorage.app",messagingSenderId:"869616715507",appId:"1:869616715507:web:8fcb61c67b5f4c3bc69986",measurementId:"G-60QWNY0FJG"};
