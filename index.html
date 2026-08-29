@@ -1,0 +1,2510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Grimório — Ficha D&D 2024</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#33201d">
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+}
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --leather:#33201d; --leather-deep:#241413; --leather-line:#4a2f2a;
+    --parch:#efe5cd; --parch-dark:#e2d3ae; --parch-line:#c9b788;
+    --ink:#2b2115; --ink-soft:#5d4c33;
+    --gold:#b98f1e; --gold-soft:#d8b34a;
+    --blood:#8e2f2b; --heal:#3d6b3a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--leather-deep);
+    background-image:radial-gradient(ellipse at 50% -10%, #45292377 0%, transparent 60%);
+    font-family:"Palatino Linotype", Palatino, "Iowan Old Style", Georgia, serif;
+    color:var(--ink);
+    display:flex; flex-direction:column;
+    max-width:520px; margin:0 auto; min-height:100vh;
+  }
+  /* ---------- topo ---------- */
+  header{
+    padding:14px 16px 10px; color:var(--parch); text-align:center;
+    border-bottom:1px solid var(--leather-line);
+  }
+  header h1{
+    font-size:1.05rem; letter-spacing:.22em; text-transform:uppercase;
+    font-weight:400; color:var(--gold-soft);
+  }
+  header .sub{font-size:.72rem; letter-spacing:.12em; color:#a58a6b; margin-top:2px;}
+  #saveState{font-size:.68rem; color:#7d6a52; margin-top:4px; min-height:1em; transition:color .3s;}
+  #saveState.ok{color:var(--gold-soft);}
+  /* ---------- abas ---------- */
+  nav{
+    display:flex; border-bottom:2px solid var(--gold);
+    background:var(--leather);
+  }
+  nav button{
+    flex:1; padding:12px 0 10px; background:none; border:none; cursor:pointer;
+    font-family:inherit; font-size:.85rem; letter-spacing:.14em; text-transform:uppercase;
+    color:#9c7f60;
+  }
+  nav button.on{color:var(--gold-soft); background:linear-gradient(#3f2823,#33201d);}
+  main{flex:1; overflow-y:auto; padding:14px 12px 90px;}
+  .tab{display:none;} .tab.on{display:block;}
+  /* ---------- pergaminho ---------- */
+  .card{
+    background:var(--parch);
+    background-image:linear-gradient(160deg, #f4ecd8 0%, var(--parch) 45%, var(--parch-dark) 100%);
+    border:1px solid var(--parch-line);
+    border-radius:6px; padding:14px; margin-bottom:14px; position:relative;
+    box-shadow:0 2px 8px #00000055;
+  }
+  .card::before, .card::after{
+    content:""; position:absolute; width:14px; height:14px;
+    border:2px solid var(--gold); opacity:.55;
+  }
+  .card::before{top:5px; left:5px; border-right:none; border-bottom:none;}
+  .card::after{bottom:5px; right:5px; border-left:none; border-top:none;}
+  h2{
+    font-size:.78rem; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--ink-soft); border-bottom:1px solid var(--parch-line);
+    padding-bottom:6px; margin-bottom:12px; text-align:center;
+  }
+  label{display:block; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:3px;}
+  input[type=text], input[type=number], textarea, select{
+    width:100%; background:#fff9ec; border:1px solid var(--parch-line); border-radius:4px;
+    padding:8px 9px; font-family:inherit; font-size:1rem; color:var(--ink);
+  }
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--gold-soft); outline-offset:1px;}
+  textarea{resize:vertical; min-height:88px; line-height:1.45;}
+  textarea.big{
+    min-height:220px; font-size:1.28rem; line-height:1.7; padding:14px 15px;
+  }
+  @media (max-width:480px){
+    textarea.big{ min-height:260px; font-size:1.32rem; line-height:1.75; padding:16px; }
+  }
+  .row{display:grid; gap:10px; margin-bottom:10px;}
+  .r2{grid-template-columns:1fr 1fr;} .r3{grid-template-columns:1fr 1fr 1fr;}
+  /* ---------- atributos ---------- */
+  .abilities{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .ab{
+    text-align:center; background:#fff9ec; border:1px solid var(--parch-line);
+    border-radius:6px; padding:8px 4px 10px; position:relative;
+  }
+  .ab .nm{font-size:.66rem; letter-spacing:.15em; color:var(--ink-soft); text-transform:uppercase;}
+  .ab input{
+    width:58px; text-align:center; font-size:1.25rem; font-weight:700;
+    border:none; background:transparent; padding:2px 0; margin:2px auto;
+  }
+  .ab .mod{
+    display:inline-block; min-width:44px; padding:2px 8px; border-radius:99px;
+    background:var(--ink); color:var(--gold-soft); font-weight:700; font-size:.95rem;
+  }
+  /* ---------- PV: elemento assinatura ---------- */
+  .hpwrap{display:flex; align-items:center; justify-content:center; gap:16px; margin:4px 0 10px;}
+  .shield{
+    width:132px; height:148px; position:relative; flex-shrink:0;
+    background:linear-gradient(170deg,#f7efdb,#e0cfa4);
+    border:2px solid var(--gold);
+    clip-path:polygon(50% 0, 100% 14%, 100% 62%, 50% 100%, 0 62%, 0 14%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    filter:drop-shadow(0 3px 5px #00000066);
+  }
+  .shield .hp{font-size:2.5rem; font-weight:700; line-height:1;}
+  .shield .hpmax{font-size:.85rem; color:var(--ink-soft);}
+  .shield .lbl{font-size:.6rem; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); margin-top:4px;}
+  .hpbtns{display:flex; flex-direction:column; gap:8px;}
+  .preswrap{display:flex; flex-wrap:wrap; gap:6px; justify-content:center;}
+  .preschip{
+    background:#f0e6cf; border:1px solid var(--parch-line); border-radius:99px;
+    padding:5px 12px; font-size:.85rem;
+  }
+  .preschip .pj{font-size:.72rem; color:var(--ink-soft);}
+  .card[data-card]{ position:relative; transition:box-shadow .15s; }
+  .card[data-card].cardmin{ max-height:58px; overflow:hidden; }
+  .card[data-card].cardmin::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:26px;
+    background:linear-gradient(transparent, var(--parch)); pointer-events:none;
+  }
+  .cardmin-btn{
+    position:absolute; top:8px; right:10px; z-index:2;
+    width:28px; height:28px; border-radius:6px; border:1px solid var(--parch-line);
+    background:#fff9ec; color:var(--ink); font-size:.85rem; cursor:pointer;
+  }
+  body.reord .cardmin-btn{ top:52px; }
+  body.reord .card[data-card]{
+    box-shadow:0 0 0 2px var(--gold-soft), 0 3px 10px rgba(0,0,0,.15);
+  }
+  .reordbar{
+    display:none; align-items:center; justify-content:flex-end; gap:6px;
+    margin:-4px -2px 10px;
+  }
+  body.reord .reordbar{ display:flex; }
+  .reordbar button{
+    width:34px; height:34px; border-radius:6px; border:1px solid var(--parch-line);
+    background:#fff9ec; color:var(--ink); font-size:1rem; cursor:pointer;
+  }
+  .reordbar button:disabled{ opacity:.35; cursor:default; }
+  .libbtn{
+    position:fixed; right:16px; bottom:16px; z-index:3300;
+    width:50px; height:50px; border-radius:50%;
+    background:linear-gradient(#3f2823,#33201d); border:1px solid var(--gold);
+    color:var(--gold-soft); font-size:1.4rem; cursor:grab; touch-action:none;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 16px #000000aa;
+  }
+  .libbtn:active{ cursor:grabbing; }
+  #libPanel{
+    position:fixed; z-index:3300; width:340px; max-width:90vw; max-height:70vh;
+    display:flex; flex-direction:column; overflow:hidden;
+    background:linear-gradient(160deg,#fbf6e6 0%,var(--parch) 45%,var(--parch-dark) 100%);
+    border:1px solid var(--gold); border-radius:8px; padding:14px;
+    box-shadow:0 14px 36px #000000bb;
+  }
+  .libhead{display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:grab; touch-action:none;}
+  .libhead:active{cursor:grabbing;}
+  .libhead .xbtn{
+    width:30px; height:30px; border-radius:6px; border:1px solid var(--blood); color:var(--blood);
+    background:transparent; font-size:1rem; cursor:pointer; flex-shrink:0;
+  }
+  .libtabs{ display:flex; gap:6px; margin-bottom:8px; }
+  .libtabs button{
+    flex:1; padding:8px 0; border-radius:6px; border:1px solid var(--parch-line);
+    background:#f4f1e8; font-size:.82rem; cursor:pointer; color:var(--ink-soft);
+  }
+  .libtabs button.on{ border-color:var(--gold); color:var(--ink); font-weight:700; background:#fff9ec; }
+  #libLista{ flex:1; overflow-y:auto; margin-top:8px; }
+  .pdfitem{ display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px dotted var(--parch-line); }
+  .pdfitem .pdfic{ font-size:1.3rem; }
+  .pdfitem .pdfnome{ flex:1; min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .libcat{
+    font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft);
+    margin:10px 0 4px; font-weight:700;
+  }
+  .libitem{ padding:6px 2px; border-bottom:1px dotted var(--parch-line); cursor:pointer; }
+  .libitem b{ display:block; }
+  .libitem .libd{ font-size:.82rem; color:var(--ink-soft); line-height:1.35; margin-top:3px; }
+  #toastLayer{
+    position:fixed; top:14px; left:0; right:0; z-index:4000;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    pointer-events:none; padding:0 14px;
+  }
+  .toast{
+    pointer-events:auto; cursor:pointer;
+    max-width:400px; width:100%;
+    background:linear-gradient(#3f2823,#33201d); color:var(--parch);
+    border:1px solid var(--gold); border-radius:10px;
+    padding:10px 14px; box-shadow:0 8px 24px #000000aa;
+    animation:toastIn .25s ease-out;
+    display:flex; gap:10px; align-items:flex-start;
+  }
+  .toast .ic{font-size:1.2rem; line-height:1;}
+  .toast b{color:var(--gold-soft);}
+  .toast .tt{font-size:.88rem; line-height:1.3; word-break:break-word;}
+  .toast.out{animation:toastOut .25s ease-in forwards;}
+  @keyframes toastIn{from{opacity:0; transform:translateY(-14px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes toastOut{from{opacity:1; transform:translateY(0);} to{opacity:0; transform:translateY(-14px);}}
+  .chatwrap{display:flex; flex-direction:column; gap:7px; max-height:340px; overflow-y:auto; padding:2px;}
+  .cmsg{
+    background:#f6efdb; border:1px solid var(--parch-line); border-radius:10px;
+    padding:7px 10px; max-width:88%; align-self:flex-start;
+  }
+  .cmsg.eu{align-self:flex-end; background:#efe4c4; border-color:var(--gold);}
+  .cmsg .who{font-size:.7rem; color:var(--ink-soft); display:flex; gap:8px; margin-bottom:2px;}
+  .cmsg .priv{color:var(--blood); font-weight:700;}
+  .cmsg .tx{font-size:.92rem; line-height:1.35; word-break:break-word;}
+  .mapctrl{
+    display:flex; gap:8px; justify-content:center; padding:8px;
+    background:#241a0f; border-bottom:1px solid var(--leather-line);
+  }
+  .mapctrl button{
+    width:44px; height:36px; border-radius:6px; border:1px solid var(--gold);
+    background:transparent; color:var(--gold-soft); font-size:1rem; cursor:pointer;
+  }
+  #mapaStage{
+    width:100%; height:64vh; overflow:hidden; background:#161008; position:relative; touch-action:none;
+  }
+  #mapaCanvasEl{
+    position:absolute; top:0; left:0; max-width:none; user-select:none;
+    transform-origin:0 0;
+  }
+  .mapctrl button.on{ border-color:var(--gold-soft); box-shadow:0 0 0 2px var(--gold-soft) inset; color:#fff; }
+  .tempbadge{
+    position:absolute; top:14%; right:12%; background:#2e6e6a; color:#e6f4f2;
+    font-size:.72rem; font-weight:700; border-radius:99px; padding:2px 7px;
+    border:1px solid #1d4a47; display:none;
+  }
+  .temprow{
+    display:flex; align-items:center; justify-content:center; gap:8px; margin:-2px 0 10px; flex-wrap:wrap;
+  }
+  .temprow input{width:64px; text-align:center; padding:5px;}
+  .temprow .tempdica{font-size:.64rem; color:var(--ink-soft); width:100%; text-align:center;}
+  .hpbtns button{
+    width:64px; padding:10px 0; font-size:1.2rem; font-weight:700; border-radius:6px;
+    border:1px solid var(--parch-line); font-family:inherit; cursor:pointer;
+  }
+  .btn-dmg{background:var(--blood); color:#f5e6dc; border-color:#6d221f;}
+  .btn-heal{background:var(--heal); color:#e8f0e2; border-color:#2c522a;}
+  .hpamt{width:64px; text-align:center; font-size:1.05rem;}
+  /* ---------- pílulas de stats ---------- */
+  .pills{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .pill{text-align:center; background:#fff9ec; border:1px solid var(--parch-line); border-radius:6px; padding:6px 2px;}
+  .pill .v{font-size:1.15rem; font-weight:700;}
+  .pill .v input{border:none; background:transparent; width:100%; text-align:center; font-size:1.15rem; font-weight:700; padding:0;}
+  .pill .k{font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);}
+  /* ---------- morte & inspiração ---------- */
+  .death{display:flex; justify-content:space-around; align-items:center; margin-top:10px; font-size:.75rem;}
+  .death .dots{display:flex; gap:6px; margin-top:4px;}
+  .dot{width:20px; height:20px; border-radius:50%; border:2px solid var(--ink-soft); background:transparent; cursor:pointer;}
+  .dot.s.on{background:var(--heal); border-color:var(--heal);}
+  .dot.f.on{background:var(--blood); border-color:var(--blood);}
+  .insp{
+    margin-top:12px; width:100%; padding:9px; border-radius:6px; cursor:pointer;
+    font-family:inherit; font-size:.8rem; letter-spacing:.12em; text-transform:uppercase;
+    border:1px dashed var(--gold); background:transparent; color:var(--ink-soft);
+  }
+  .insp.on{background:var(--gold); color:#241413; border-style:solid; font-weight:700;}
+  /* ---------- perícias ---------- */
+  details.skills summary{
+    cursor:pointer; font-size:.78rem; letter-spacing:.15em; text-transform:uppercase;
+    color:var(--ink-soft); padding:4px 0; list-style:none; text-align:center;
+  }
+  details.skills summary::after{content:" ▾";}
+  details[open].skills summary::after{content:" ▴";}
+  .skill{
+    display:flex; align-items:center; gap:10px; padding:7px 4px;
+    border-bottom:1px dotted var(--parch-line); font-size:.92rem;
+  }
+  .skill:last-child{border-bottom:none;}
+  .skill .prof{
+    width:18px; height:18px; border-radius:50%; border:2px solid var(--ink-soft);
+    background:transparent; cursor:pointer; flex-shrink:0;
+  }
+  .skill .prof.on{background:var(--gold); border-color:var(--gold);}
+  .skill .extra{width:44px; padding:3px 2px; text-align:center; font-size:.85rem;}
+  .skill .bonus{margin-left:auto; font-weight:700; min-width:34px; text-align:right;}
+  .skill .att{color:var(--ink-soft); font-size:.72rem;}
+  /* ---------- turnos & histórico ---------- */
+  .turnrow{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:12px;}
+  .turnrow .tl{font-size:.68rem; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-soft);}
+  .turnrow .tv{font-size:1.3rem; font-weight:700; min-width:34px; text-align:center;}
+  .turnrow button{width:38px; padding:6px 0; font-weight:700; border-radius:6px; border:1px solid var(--parch-line);
+    background:#fff9ec; cursor:pointer; font-family:inherit;}
+  .turnrow .tz{width:auto; padding:6px 10px; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase;
+    background:transparent; border-style:dashed; color:var(--ink-soft); font-weight:400;}
+  .hplog{display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-top:10px; min-height:0;}
+  .hplog .chip{font-size:.74rem; padding:2px 8px; border-radius:99px; border:1px solid var(--parch-line);}
+  .hplog .chip.d{color:var(--blood); border-color:var(--blood);}
+  .hplog .chip.h{color:var(--heal); border-color:var(--heal);}
+  .hplog .zerar{font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+    background:transparent; border:1px dashed var(--ink-soft); border-radius:99px; padding:2px 10px; cursor:pointer; font-family:inherit;}
+  /* ---------- ataques ---------- */
+  .atkhead{display:none;}
+  .atk{
+    border:1px solid var(--parch-line); border-left:5px solid var(--gold);
+    border-radius:8px; background:#fffdf5;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+    padding:12px 14px 14px; margin-bottom:14px; position:relative;
+  }
+  .atk .atkrow1{display:grid; grid-template-columns:1fr 68px 34px; gap:9px; align-items:end; margin-bottom:10px;}
+  .atk .atkrow2{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+  .atk label{font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); font-weight:700; display:block; margin-bottom:4px;}
+  .atk input{padding:11px 10px; font-size:1.1rem; width:100%; border-width:1.5px;}
+  .atk input.q{text-align:center; font-weight:700;}
+  .atk input.nm{font-weight:700; font-size:1.22rem; color:var(--ink);}
+  .atk .atkrow2 input{font-weight:700; font-size:1.18rem;}
+  .atk .atkrow2 div:first-child input{ color:#8a6a1e; }
+  .atk .atkrow2 div:last-child input{ color:var(--blood); }
+  .atk .xbtn{
+    align-self:end; height:46px; border:1px solid var(--blood); border-radius:6px;
+    background:transparent; color:var(--blood); font-size:1.25rem; cursor:pointer;
+  }
+  @media (max-width:480px){
+    .atk input{font-size:1.2rem; padding:12px 10px;}
+    .atk input.nm{font-size:1.28rem;}
+    .atk .atkrow2 input{font-size:1.24rem;}
+  }
+  .xbtn{border:none; background:transparent; color:var(--blood); font-size:1.2rem; cursor:pointer;}
+  .add{
+    width:100%; padding:9px; margin-top:4px; background:transparent; cursor:pointer;
+    border:1px dashed var(--ink-soft); border-radius:6px; color:var(--ink-soft);
+    font-family:inherit; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase;
+  }
+  /* ---------- magias ---------- */
+  .slotrow{display:flex; align-items:center; gap:8px; padding:5px 2px; border-bottom:1px dotted var(--parch-line);}
+  .slotrow .circ{width:26px; font-weight:700; font-size:.9rem;}
+  .slotrow .gems{display:flex; gap:6px; flex:1; flex-wrap:wrap;}
+  .gem{
+    width:22px; height:22px; border:none; background:transparent; cursor:pointer;
+    font-size:1.15rem; line-height:1; padding:0; color:var(--gold);
+  }
+  .gem.spent{color:var(--ink-soft); opacity:.55;}
+  .slotrow .tot{width:52px; display:flex; align-items:center; gap:3px;}
+  .slotrow .tot input{width:34px; padding:3px 2px; text-align:center; font-size:.85rem;}
+  .slotrow .tot span{font-size:.6rem; color:var(--ink-soft); text-transform:uppercase;}
+  .spell{
+    display:flex; align-items:center; gap:8px; padding:6px 2px;
+    border-bottom:1px dotted var(--parch-line);
+  }
+  .spell .prep{
+    width:18px; height:18px; border-radius:50%; border:2px solid var(--ink-soft);
+    background:transparent; cursor:pointer; flex-shrink:0;
+  }
+  .spell .prep.on{background:var(--gold); border-color:var(--gold);}
+  .spell input{flex:1; border:none; background:transparent; padding:4px 2px; font-size:.95rem;}
+  .spell .cbadge{
+    font-size:.62rem; letter-spacing:.05em; color:var(--ink-soft);
+    border:1px solid var(--parch-line); border-radius:99px; padding:2px 7px; white-space:nowrap;
+  }
+  .spelladd{display:flex; gap:6px; margin-top:8px;}
+  .spelladd input{flex:1;}
+  .spelladd select{width:92px;}
+  .spelladd .gbtn{padding:6px 14px;}
+  .chev{
+    border:none; background:transparent; cursor:pointer; color:var(--ink-soft);
+    font-size:1rem; padding:2px 4px; transition:transform .18s; position:relative;
+  }
+  .chev.open{transform:rotate(90deg); color:var(--gold);}
+  .chev.has::after{
+    content:""; position:absolute; top:0; right:-1px; width:7px; height:7px;
+    border-radius:50%; background:var(--gold);
+  }
+  .spelldetail{
+    background:#faf3e0; border:1px solid var(--parch-line); border-top:none;
+    border-radius:0 0 6px 6px; padding:8px; margin:-1px 0 6px 26px;
+  }
+  .spelldetail textarea{min-height:70px; font-size:.9rem; background:transparent; border:none; padding:2px;}
+  /* ---------- anotações ---------- */
+  .note{cursor:pointer;}
+  .note h3{font-size:1.02rem; margin-bottom:2px;}
+  .note .dt{font-size:.7rem; color:var(--ink-soft); letter-spacing:.08em;}
+  .note p{font-size:.9rem; color:var(--ink-soft); margin-top:6px; line-height:1.4;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .notebar{display:flex; gap:8px; margin-bottom:12px;}
+  .notebar input{flex:1;}
+  .gbtn{
+    padding:9px 16px; border-radius:6px; border:1px solid var(--gold); cursor:pointer;
+    background:var(--gold); color:#241413; font-family:inherit; font-weight:700; font-size:.85rem;
+  }
+  .gbtn.ghost{background:transparent; color:var(--ink-soft); border-color:var(--ink-soft);}
+  .empty{text-align:center; color:#8a755a; font-size:.9rem; padding:26px 10px; font-style:italic;}
+  /* editor de nota */
+  #noteEditor .actions{display:flex; gap:8px; margin-top:10px;}
+  #noteEditor .actions .gbtn{flex:1;}
+  .danger{color:var(--blood) !important; border-color:var(--blood) !important;}
+  footer{
+    position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto;
+    background:var(--leather); border-top:1px solid var(--leather-line);
+    padding:8px 14px; text-align:center;
+  }
+  footer button{
+    background:none; border:none; color:#7d6a52; font-family:inherit;
+    font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; padding:6px 10px;
+  }
+  footer button.export{
+    color:#241413; background:var(--gold); border-radius:6px; font-weight:700;
+    padding:8px 12px;
+  }
+  footer button.ghostgold{
+    background:transparent; color:var(--gold-soft); border:1px solid var(--gold);
+    font-weight:400;
+  }
+  footer .frow{display:flex; gap:8px; justify-content:center; margin-bottom:4px;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+
+<div id="toastLayer"></div>
+
+<div id="libBtn" class="libbtn" title="📚 arraste para mover • toque para abrir">📚</div>
+<div id="libPanel" style="display:none">
+  <div class="libhead" id="libHead">
+    <h2 style="border:none; padding:0; margin:0; flex:1">📚 Biblioteca Rápida</h2>
+    <button class="xbtn" onclick="libFechar()">✕</button>
+  </div>
+  <div class="libtabs">
+    <button id="libTabRegras" class="on" onclick="libTab('regras')">📜 Regras</button>
+    <button id="libTabPdfs" onclick="libTab('pdfs')">📄 Meus PDFs</button>
+  </div>
+  <input type="text" id="libBusca" placeholder="Buscar: cego, CD, descanso, ajudar..." oninput="libRender()">
+  <button class="gbtn" id="pdfAddBtn" style="display:none; padding:9px 0; margin-bottom:2px" onclick="document.getElementById('libPdfFile').click()">+ adicionar PDF</button>
+  <input type="file" id="libPdfFile" accept="application/pdf" style="display:none" onchange="pdfArquivoEscolhido(this)">
+  <div id="libLista"></div>
+  <p style="font-size:.64rem; color:var(--ink-soft); margin-top:8px; text-align:center">
+    Referência rápida baseada no SRD 5.2 (CC-BY-4.0). Para regras completas, consulte o livro.
+  </p>
+</div>
+
+<header>
+  <h1>Grimório do Aventureiro</h1>
+  <div class="sub">Ficha &amp; Diário — D&amp;D 2024</div>
+  <div class="sub" id="whoami" style="color:var(--gold-soft); margin-top:3px"></div>
+  <div id="saveState"></div>
+</header>
+
+<nav>
+  <button id="tabFicha" class="on" onclick="showTab('ficha')">Ficha</button>
+  <button id="tabNotas" onclick="showTab('notas')">Anotações</button>
+  <button id="tabMapa" onclick="showTab('mapa')">Mapa</button>
+  <button id="tabHerois" onclick="showTab('herois')">Heróis</button>
+  <button id="tabMesa" onclick="showTab('mesa')">Mesa</button>
+</nav>
+
+<main>
+<!-- ============ FICHA ============ -->
+<section id="ficha" class="tab on">
+  <div class="row r2" style="margin-bottom:12px">
+    <button class="add" id="reordBtn" onclick="toggleReorder()">↕ reorganizar quadros</button>
+    <button class="add" id="minTodosBtn" onclick="toggleMinTodos()">▾ minimizar tudo</button>
+  </div>
+  <div id="fichaCards">
+
+  <div class="card" data-card="identidade">
+    <h2>Identidade</h2>
+    <div class="row r2">
+      <div><label>Nome do personagem</label><input type="text" id="c_nome" data-k="nome"></div>
+      <div><label>Jogador (seu nome)</label><input type="text" id="c_jogador" data-k="jogador" placeholder="Bruno"></div>
+    </div>
+    <div class="row r2">
+      <div><label>Classe</label><select id="c_classe" data-k="classe"><option value="">—</option><option value="Bárbaro">Bárbaro</option><option value="Bardo">Bardo</option><option value="Bruxo">Bruxo</option><option value="Clérigo">Clérigo</option><option value="Druida">Druida</option><option value="Feiticeiro">Feiticeiro</option><option value="Guardião">Guardião</option><option value="Guerreiro">Guerreiro</option><option value="Ladino">Ladino</option><option value="Mago">Mago</option><option value="Monge">Monge</option><option value="Paladino">Paladino</option><option value="__outra">Outra / multiclasse...</option></select></div>
+      <div><label>Nível</label><input type="number" id="c_nivel" data-k="nivel" min="1" max="20" value="1"></div>
+    </div>
+    <div class="row r2">
+      <div><label>Espécie</label><select id="c_especie" data-k="especie"><option value="">—</option><option value="Aasimar">Aasimar</option><option value="Anão">Anão</option><option value="Draconato">Draconato</option><option value="Elfo">Elfo</option><option value="Gnomo">Gnomo</option><option value="Golias">Golias</option><option value="Humano">Humano</option><option value="Orc">Orc</option><option value="Pequenino">Pequenino</option><option value="Tiferino">Tiferino</option><option value="__outra">Outra...</option></select></div>
+      <div><label>Antecedente</label><input type="text" id="c_antec" data-k="antecedente"></div>
+    </div>
+    <div class="row r2">
+      <div><label>Subclasse</label><input type="text" id="c_sub" data-k="subclasse"></div>
+      <div><label>Alinhamento</label><input type="text" id="c_alin" data-k="alinhamento"></div>
+    </div>
+  </div>
+
+  <div class="card" data-card="atributos">
+    <h2>Atributos</h2>
+    <div class="abilities" id="abilities"></div>
+  </div>
+
+  <div class="card" data-card="combate">
+    <h2>Combate</h2>
+    <div class="hpwrap">
+      <div>
+        <div class="hpbtns">
+          <input type="number" class="hpamt" id="hpAmt" value="1" min="1" aria-label="Quantidade de PV">
+          <button class="btn-dmg" onclick="hp(-1)" aria-label="Sofrer dano">−</button>
+          <button class="btn-heal" onclick="hp(1)" aria-label="Curar">+</button>
+        </div>
+      </div>
+      <div class="shield" onclick="editHpMax()" title="Toque para editar PV máximo">
+        <div class="tempbadge" id="tempBadge" title="PV temporários">+0</div>
+        <div class="hp" id="hpNow">10</div>
+        <div class="hpmax">/ <span id="hpMax">10</span></div>
+        <div class="lbl">Pontos de Vida</div>
+      </div>
+    </div>
+    <div class="temprow">
+      <label style="margin:0">PV temporários</label>
+      <input type="number" id="hpTemp" min="0" value="0" aria-label="pontos de vida temporários">
+      <span class="tempdica">absorvem o dano primeiro • somem no descanso longo</span>
+    </div>
+    <div class="pills">
+      <div class="pill"><div class="v"><input type="number" id="c_ca" data-k="ca" value="10"></div><div class="k">CA</div></div>
+      <div class="pill"><div class="v" id="v_init">+0</div><div class="k">Iniciativa</div></div>
+      <div class="pill"><div class="v"><input type="text" id="c_desl" data-k="desloc" value="9m"></div><div class="k">Desloc.</div></div>
+      <div class="pill"><div class="v" id="v_prof">+2</div><div class="k">Profic.</div></div>
+    </div>
+    <div class="death">
+      <div><label>Sucessos</label><div class="dots" id="dsS"></div></div>
+      <div><label>Falhas</label><div class="dots" id="dsF"></div></div>
+    </div>
+    <button class="insp" id="inspBtn" onclick="toggleInsp()">✧ Inspiração Heroica</button>
+    <div class="turnrow">
+      <span class="tl">Turno</span>
+      <button onclick="turno(-1)">−</button>
+      <span id="turnoV" class="tv">1</span>
+      <button onclick="turno(1)">+</button>
+      <button class="tz" onclick="turnoZero()">zerar</button>
+    </div>
+    <div id="hpLog" class="hplog"></div>
+  </div>
+
+  <div class="card" data-card="pericias">
+    <details class="skills">
+      <summary>Perícias</summary>
+      <p style="font-size:.72rem; color:var(--ink-soft); text-align:center; margin-top:6px">● proficiência • campo "±" para bônus extras (itens, talentos) • total no fim</p>
+      <div id="skillList" style="margin-top:8px"></div>
+    </details>
+  </div>
+
+  <div class="card" data-card="ataques">
+    <h2>Ataques</h2>
+    <div class="atkhead"><span>qtd</span><span>ataque</span><span>bônus</span><span>dano</span><span></span></div>
+    <div id="atkList"></div>
+    <button class="add" onclick="addAtk()">+ adicionar ataque</button>
+    <textarea id="c_atknotas" data-k="atknotas" placeholder="Anotações de combate: manobras, condições de uso, munição, efeitos ao acertar..." style="margin-top:10px; min-height:64px"></textarea>
+  </div>
+
+  <div class="card" data-card="companheiros">
+    <h2>Companheiros &amp; Familiares</h2>
+    <div id="petList"></div>
+    <button class="add" onclick="addPet()">+ novo companheiro</button>
+  </div>
+
+  <div class="card" data-card="caracteristicas">
+    <h2>Características</h2>
+    <textarea class="big" id="c_carac" data-k="carac" placeholder="Traços de classe e subclasse: Fúria, Ataque Extra, Maestria de Armas (Topple)..."></textarea>
+  </div>
+
+  <div class="card" data-card="tracos">
+    <h2>Traços de Espécie</h2>
+    <textarea class="big" id="c_tracos" data-k="tracos" placeholder="Visão no Escuro 18m, Resistência Anã, Sorte Halfling, deslocamento especial..."></textarea>
+  </div>
+
+  <div class="card" data-card="talentos">
+    <h2>Talentos</h2>
+    <button class="add" style="margin-bottom:8px" onclick="toggleTal()">📖 biblioteca de talentos</button>
+    <div id="talPanel" style="display:none; margin-bottom:8px">
+      <input type="text" id="talBusca" placeholder="Buscar talento..." oninput="renderTal()" style="margin-bottom:8px">
+      <div id="talList" style="max-height:260px; overflow-y:auto"></div>
+      <p style="font-size:.64rem; color:var(--ink-soft); margin-top:6px; text-align:center">
+        Resumos mecânicos (regras 2024). Toque em + para adicionar aos seus talentos.
+      </p>
+    </div>
+    <textarea class="big" id="c_talentos" data-k="talentos" placeholder="Talento de origem (nível 1) e talentos gerais: Sortudo, Atirador Certeiro (nível 4)..."></textarea>
+  </div>
+
+  <div class="card" data-card="treinamento">
+    <h2>Treinamento &amp; Proficiências</h2>
+    <textarea class="big" id="c_trein" data-k="trein" placeholder="Armaduras: leves e médias, escudos. Armas: simples e marciais. Ferramentas: kit de ladrão. Idiomas: Comum, Élfico..."></textarea>
+  </div>
+
+  <div class="card" data-card="magias">
+    <h2>Magias</h2>
+    <div class="row r2">
+      <div><label>CD de magia</label><input type="number" id="c_cdmag" data-k="cdmag"></div>
+      <div><label>Bônus de ataque</label><input type="number" id="c_atqmag" data-k="atqmag"></div>
+    </div>
+    <label style="margin-top:6px">Espaços de magia <span style="text-transform:none">(toque no ◆ para gastar, no ◇ para recuperar)</span></label>
+    <div id="slotList"></div>
+    <button class="add" onclick="longRest()">☾ descanso longo — recuperar espaços</button>
+    <label style="margin-top:14px">Magias conhecidas / preparadas <span style="text-transform:none">(toque no círculo para marcar preparada)</span></label>
+    <div id="spellList"></div>
+    <div class="spelladd">
+      <input type="text" id="spName" placeholder="Mísseis Mágicos">
+      <select id="spCirc">
+        <option value="0">Truque</option>
+        <option value="1" selected>1º</option><option value="2">2º</option><option value="3">3º</option>
+        <option value="4">4º</option><option value="5">5º</option><option value="6">6º</option>
+        <option value="7">7º</option><option value="8">8º</option><option value="9">9º</option>
+      </select>
+      <button class="gbtn" onclick="addSpell()">+</button>
+    </div>
+    <button class="add" style="margin-top:10px" onclick="toggleBiblio()">📖 biblioteca de magias</button>
+    <div id="biblioPanel" style="display:none; margin-top:10px">
+      <div style="display:flex; gap:6px; margin-bottom:8px">
+        <input type="text" id="bibBusca" placeholder="Buscar magia..." oninput="renderBiblio()" style="flex:1">
+        <select id="bibCirc" onchange="renderBiblio()" style="width:90px">
+          <option value="">Todos</option><option value="0">Truque</option>
+          <option value="1">1º</option><option value="2">2º</option><option value="3">3º</option>
+          <option value="4">4º</option><option value="5">5º</option><option value="6">6º</option>
+          <option value="7">7º</option><option value="9">9º</option>
+        </select>
+      </div>
+      <select id="bibClasse" onchange="renderBiblio()" style="margin-bottom:8px">
+        <option value="">Todas as classes</option>
+        <option value="bardo">Bardo</option><option value="bruxo">Bruxo</option>
+        <option value="clérigo">Clérigo</option><option value="druida">Druida</option>
+        <option value="feiticeiro">Feiticeiro</option><option value="guardião">Guardião</option>
+        <option value="mago">Mago</option><option value="paladino">Paladino</option>
+      </select>
+      <div id="biblioList" style="max-height:300px; overflow-y:auto"></div>
+      <p style="font-size:.64rem; color:var(--ink-soft); margin-top:8px; text-align:center">
+        Resumos mecânicos baseados no SRD 5.2 da Wizards of the Coast (licença CC-BY-4.0). Confira detalhes finos no livro.
+      </p>
+    </div>
+    <textarea id="c_magias" data-k="magias" placeholder="Anotações de magia: componentes caros, concentração ativa, usos de habilidade..." style="margin-top:10px; min-height:64px"></textarea>
+  </div>
+
+  <div class="card" data-card="idiomas">
+    <h2>Idiomas Conhecidos</h2>
+    <textarea id="c_idiomas" data-k="idiomas" placeholder="Comum, Élfico, Anão, Gíria de Ladrão..." style="min-height:56px"></textarea>
+  </div>
+
+  <div class="card" data-card="moedas">
+    <h2>Bolsa de Moedas</h2>
+    <div class="pills" style="grid-template-columns:repeat(5,1fr)" id="moedasRow"></div>
+  </div>
+
+  <div class="card" data-card="equipamento">
+    <h2>Equipamento &amp; Tesouro</h2>
+    <textarea id="c_equip" data-k="equip" placeholder="Armadura, mochila, 15 PO..."></textarea>
+  </div>
+  </div>
+</section>
+
+<!-- ============ ANOTAÇÕES ============ -->
+<section id="notas" class="tab">
+  <div class="notebar">
+    <input type="text" id="noteSearch" placeholder="Buscar nas anotações..." oninput="renderNotes()">
+    <button class="gbtn" onclick="openNote(null)">Nova</button>
+  </div>
+  <div id="noteEditor" class="card" style="display:none">
+    <h2 id="neTitle">Nova anotação</h2>
+    <div class="row"><div><label>Título</label><input type="text" id="neT" placeholder="Sessão 12 — A cripta"></div></div>
+    <div class="row"><div><label>Texto</label><textarea id="neB" style="min-height:150px" placeholder="NPCs, pistas, loot, o que rolou..."></textarea></div></div>
+    <div class="actions">
+      <button class="gbtn" onclick="saveNote()">Salvar</button>
+      <button class="gbtn ghost" onclick="closeNote()">Cancelar</button>
+      <button class="gbtn ghost danger" id="neDel" onclick="delNote()" style="display:none">Apagar</button>
+    </div>
+  </div>
+  <div id="noteList"></div>
+</section>
+
+<!-- ============ HERÓIS ============ -->
+<section id="mapa" class="tab">
+  <div class="card" style="padding:0; overflow:hidden">
+    <div id="mapaEmpty" class="empty" style="padding:30px 14px">o mestre ainda não enviou um mapa</div>
+    <div id="mapaViewWrap" style="display:none">
+      <div class="mapctrl">
+        <button onclick="mapaZoom(-0.25)">－</button>
+        <button onclick="mapaZoomReset()">100%</button>
+        <button onclick="mapaZoom(0.25)">＋</button>
+        <span style="width:1px; background:var(--leather-line); align-self:stretch; margin:0 2px"></span>
+        <button id="mpPin" onclick="mapaPlayerFerramenta('pin')" title="marcar ponto">📍</button>
+        <button id="mpDraw" onclick="mapaPlayerFerramenta('draw')" title="desenhar">✏️</button>
+        <button onclick="mapaPlayerDesfazer()" title="desfazer">↩</button>
+        <button onclick="mapaPlayerLimpar()" title="apagar minhas marcações">🗑</button>
+      </div>
+      <div id="mapaStage"><canvas id="mapaCanvasEl"></canvas></div>
+      <p style="font-size:.68rem; color:var(--ink-soft); text-align:center; padding:6px 10px 0">
+        📍✏️ suas marcações são só suas — o mestre não as vê
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="herois" class="tab">
+  <button class="gbtn" style="width:100%; padding:12px" onclick="newChar()">＋ Criar novo personagem</button>
+  <div id="rosterList" style="margin-top:14px"></div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>Ficha &amp; Backup</h2>
+    <p style="font-size:.8rem; color:var(--ink-soft); text-align:center; margin-bottom:10px">
+      As ações abaixo valem para o herói aberto (⚔ no topo) — exceto o backup, que guarda a galeria inteira.
+    </p>
+    <div class="row r2">
+      <button class="gbtn" style="padding:11px 0" onclick="exportPDF()">✦ exportar PDF</button>
+      <button class="gbtn" style="padding:11px 0" onclick="exportToDM()">enviar ao mestre</button>
+    </div>
+    <div class="row r2" style="margin-bottom:0">
+      <button class="gbtn ghost" style="padding:11px 0" onclick="exportData()">salvar backup</button>
+      <button class="gbtn ghost" style="padding:11px 0" onclick="document.getElementById('importFile').click()">restaurar</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importData(this)">
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>Mesa Online — tempo real</h2>
+    <p style="font-size:.82rem; color:var(--ink-soft); line-height:1.45; margin-bottom:10px">
+      Conectado à sala do mestre, este herói envia a ficha automaticamente a cada alteração,
+      e itens entregues ou vendidos pelo mestre chegam sozinhos no seu equipamento
+      (compras descontam da sua bolsa de ouro).
+    </p>
+    <label>Configuração do Firebase (opcional — a da mesa já vem gravada)</label>
+    <textarea id="fbCfg" style="min-height:52px; font-size:.78rem" placeholder="já configurado ✓ — só o código da sala basta"></textarea>
+    <div class="row r2" style="margin-top:10px">
+      <div><label>Código da sala</label><input type="text" id="fbSala" placeholder="MESA42" style="text-transform:uppercase"></div>
+      <div style="display:flex; align-items:flex-end">
+        <button class="gbtn" id="fbBtn" style="width:100%; padding:9px 0" onclick="fbToggle()">conectar este herói</button>
+      </div>
+    </div>
+    <div id="fbStatus" style="font-size:.78rem; color:var(--ink-soft); margin-top:8px; text-align:center">desconectado</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>Aparência — Wallpaper</h2>
+    <p style="font-size:.8rem; color:var(--ink-soft); text-align:center; margin-bottom:10px">
+      Escolha uma imagem de fundo para o Grimório (arte do seu herói, mapa, o que quiser).
+      Ela é escurecida para a ficha continuar legível — ajuste no controle abaixo.
+    </p>
+    <div class="row r2" style="margin-bottom:10px">
+      <button class="gbtn" style="padding:10px 0" onclick="document.getElementById('wallFile').click()">escolher imagem</button>
+      <button class="gbtn ghost" style="padding:10px 0" onclick="wallRemover()">remover</button>
+    </div>
+    <label>Escurecimento do fundo</label>
+    <input type="range" id="wallDim" min="40" max="95" value="82" style="width:100%">
+    <input type="file" id="wallFile" accept="image/*" style="display:none" onchange="wallEscolher(this)">
+  </div>
+</section>
+
+<!-- ============ MESA (presença + chat) ============ -->
+<section id="mesa" class="tab">
+  <div class="card">
+    <h2>Na Sala</h2>
+    <div id="fbPresenca" class="preswrap"><div class="empty">conecte-se à sala do mestre (aba Heróis → Mesa Online)</div></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h2>Chat da Mesa</h2>
+    <div id="chatMsgs" class="chatwrap"><div class="empty">nenhuma mensagem ainda</div></div>
+    <div style="display:flex; gap:6px; margin-top:10px">
+      <select id="chatPara" style="width:150px">
+        <option value="">para todos</option>
+        <option value="mestre">🔒 só o mestre</option>
+      </select>
+      <input type="text" id="chatTxt" placeholder="Sua mensagem..." style="flex:1">
+      <button class="gbtn" style="padding:8px 14px" onclick="fbEnviarChat()">➤</button>
+    </div>
+    <p style="font-size:.72rem; color:var(--ink-soft); margin-top:8px; text-align:center">
+      Escolha um nome no seletor para falar em segredo — com o mestre ou com outro jogador. Só ele verá.
+    </p>
+  </div>
+</section>
+
+<!-- ============ MAPA (visualização) ============ -->
+</main>
+
+<footer>
+  <button onclick="resetAll()">apagar todos os dados</button>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ================== estado ================== */
+const ABS = [["for","Força"],["des","Destreza"],["con","Constituição"],["int","Inteligência"],["sab","Sabedoria"],["car","Carisma"]];
+const SKILLS = [
+ ["Acrobacia","des"],["Adestrar Animais","sab"],["Arcanismo","int"],["Atletismo","for"],
+ ["Atuação","car"],["Enganação","car"],["Furtividade","des"],["História","int"],
+ ["Intimidação","car"],["Intuição","sab"],["Investigação","int"],["Medicina","sab"],
+ ["Natureza","int"],["Percepção","sab"],["Persuasão","car"],["Prestidigitação","des"],
+ ["Religião","int"],["Sobrevivência","sab"]
+];
+function blankEntry(){
+  return {
+    id:"c"+Date.now()+Math.random().toString(36).slice(2,6),
+    up:Date.now(),
+    char:{nome:"",jogador:"",classe:"",nivel:1,especie:"",antecedente:"",subclasse:"",alinhamento:"",
+      ca:10,desloc:"9m",hp:10,hpmax:10,hptemp:0,insp:false,dsS:0,dsF:0,atknotas:"",
+      abs:{for:10,des:10,con:10,int:10,sab:10,car:10},
+      profs:{}, skillExtra:{}, initExtra:0, atks:[], pets:[], spells:[], slots:{},
+      moedas:{pc:0,pp:0,pe:0,po:0,pl:0}, hplog:[], turno:1,
+      carac:"",tracos:"",talentos:"",trein:"",idiomas:"",magias:"",cdmag:"",atqmag:"",equip:""},
+    notes:[]
+  };
+}
+let R = {version:2, currentId:null, chars:[], uiPos:{}};  // galeria de heróis
+let S = null;                                    // personagem aberto (entrada de R)
+const KEY="grimorio-dnd-v2", KEY_OLD="grimorio-dnd-v1";
+let saveTimer=null, memoryOnly=false;
+function migrateEntry(e){
+  e.char={...blankEntry().char, ...e.char};
+  if(e.char.feats && !e.char.carac){ e.char.carac=e.char.feats; delete e.char.feats; }
+  e.notes=Array.isArray(e.notes)?e.notes:[];
+  return e;
+}
+
+/* Adaptador: dentro do Claude usa window.storage; aberto direto no
+   navegador (Chrome no Android etc.) usa localStorage do aparelho. */
+async function storGetKey(k){
+  if(typeof window.storage!=="undefined"){
+    try{ const r=await window.storage.get(k); return r?r.value:null; }
+    catch(e){ return null; }
+  }
+  try{ return localStorage.getItem(k); }
+  catch(e){ memoryOnly=true; return null; }
+}
+async function storGet(){ return storGetKey(KEY); }
+async function storSet(v){
+  if(typeof window.storage!=="undefined"){ await window.storage.set(KEY,v); return; }
+  localStorage.setItem(KEY,v);
+}
+async function storDel(){
+  if(typeof window.storage!=="undefined"){ try{ await window.storage.delete(KEY); }catch(e){} return; }
+  try{ localStorage.removeItem(KEY); }catch(e){}
+}
+
+function setSaveState(t,ok){const e=document.getElementById("saveState");e.textContent=t;e.className=ok?"ok":"";}
+
+async function load(){
+  const raw=await storGet();
+  if(raw){
+    try{
+      const d=JSON.parse(raw);
+      R={version:2, currentId:d.currentId||null, chars:(d.chars||[]).map(migrateEntry),
+         fb:d.fb, wall:d.wall||"", wallDim:d.wallDim??82, mapaAnotacoes:d.mapaAnotacoes||{src:"",ops:[]}, uiPos:d.uiPos||{}};
+      setSaveState("dados carregados ✧",true);
+    }catch(e){ setSaveState("não consegui ler os dados salvos"); }
+  }else{
+    // migração: ficha do formato antigo (personagem único) vira o 1º herói da galeria
+    const old=await storGetKey(KEY_OLD);
+    if(old){
+      try{
+        const d=JSON.parse(old);
+        R.chars=[migrateEntry({...blankEntry(), char:d.char||{}, notes:d.notes||[]})];
+        setSaveState("ficha migrada para a galeria de heróis ✧",true);
+      }catch(e){}
+    }else{
+      setSaveState(memoryOnly?"sem armazenamento — use “salvar backup” para não perder nada":"grimório novo — comece a escrever",!memoryOnly);
+    }
+  }
+  if(!R.chars.length) R.chars=[blankEntry()];
+  S=R.chars.find(c=>c.id===R.currentId) || R.chars[0];
+  R.currentId=S.id;
+  if(!raw) save();   // persiste a migração ou a criação inicial
+  renderAll();
+  fbConectar(false);
+}
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async ()=>{
+    if(memoryOnly){ setSaveState("sem armazenamento — use “salvar backup”"); return; }
+    try{ if(S) S.up=Date.now(); await storSet(JSON.stringify(R)); setSaveState("salvo ✧",true); fbPushHero(); }
+    catch(e){ setSaveState("falha ao salvar — tente de novo"); }
+  },600);
+  setSaveState("salvando...");
+}
+
+/* ================== ficha ================== */
+const mod = v => Math.floor((Number(v||10)-10)/2);
+const fmt = m => (m>=0?"+":"")+m;
+const profBonus = lv => Math.ceil(Number(lv||1)/4)+1;
+
+function renderAbilities(){
+  const el=document.getElementById("abilities"); el.innerHTML="";
+  ABS.forEach(([k,nm])=>{
+    const d=document.createElement("div"); d.className="ab";
+    d.innerHTML=`<div class="nm">${nm}</div>
+      <input type="number" min="1" max="30" value="${S.char.abs[k]}" aria-label="${nm}">
+      <div><span class="mod">${fmt(mod(S.char.abs[k]))}</span></div>`;
+    d.querySelector("input").addEventListener("input",ev=>{
+      S.char.abs[k]=Number(ev.target.value)||10;
+      d.querySelector(".mod").textContent=fmt(mod(S.char.abs[k]));
+      renderDerived(); renderSkills(); save();
+    });
+    el.appendChild(d);
+  });
+}
+function renderDerived(){
+  const init=mod(S.char.abs.des)+(Number(S.char.initExtra)||0);
+  const iv=document.getElementById("v_init");
+  iv.textContent=fmt(init);
+  iv.parentElement.style.cursor="pointer";
+  iv.parentElement.title="Toque para editar o bônus extra de iniciativa";
+  iv.parentElement.onclick=()=>{
+    const v=prompt("Bônus extra de iniciativa (talentos, itens, Alerta...):", S.char.initExtra||0);
+    if(v!==null && !isNaN(v)){ S.char.initExtra=Number(v); renderDerived(); save(); }
+  };
+  document.getElementById("v_prof").textContent=fmt(profBonus(S.char.nivel));
+  document.getElementById("hpNow").textContent=S.char.hp;
+  document.getElementById("hpMax").textContent=S.char.hpmax;
+  const tb=document.getElementById("tempBadge");
+  const tmp=Number(S.char.hptemp)||0;
+  tb.textContent="+"+tmp; tb.style.display=tmp>0?"block":"none";
+  const ti=document.getElementById("hpTemp");
+  if(document.activeElement!==ti) ti.value=tmp;
+  if(!ti.dataset.bound){ ti.dataset.bound="1";
+    ti.oninput=e=>{ S.char.hptemp=Math.max(0,Number(e.target.value)||0);
+      tb.textContent="+"+S.char.hptemp; tb.style.display=S.char.hptemp>0?"block":"none"; save(); }; }
+  document.getElementById("turnoV").textContent=S.char.turno||1;
+  const b=document.getElementById("inspBtn");
+  b.classList.toggle("on",!!S.char.insp);
+  b.textContent=(S.char.insp?"✦ Inspiração Heroica — rerrole um dado!":"✧ Inspiração Heroica");
+  renderHpLog();
+}
+function renderHpLog(){
+  const el=document.getElementById("hpLog"); el.innerHTML="";
+  const log=S.char.hplog||[];
+  if(!log.length) return;
+  log.slice(-12).forEach(e=>{
+    const c=document.createElement("span");
+    c.className="chip "+(e.v<0?"d":"h");
+    c.textContent=(e.v<0?"−":"+")+Math.abs(e.v)+(e.t?` (t${e.t})`:"");
+    el.appendChild(c);
+  });
+  const z=document.createElement("button");
+  z.className="zerar"; z.textContent="zerar histórico";
+  z.onclick=()=>{ S.char.hplog=[]; renderHpLog(); save(); };
+  el.appendChild(z);
+}
+function turno(d){
+  S.char.turno=Math.max(1,(Number(S.char.turno)||1)+d);
+  document.getElementById("turnoV").textContent=S.char.turno; save();
+}
+function turnoZero(){ S.char.turno=1; document.getElementById("turnoV").textContent=1; save(); }
+function hp(sign){
+  const amt=Math.max(1,Number(document.getElementById("hpAmt").value)||1);
+  if(sign<0){
+    // dano: PV temporários absorvem primeiro
+    let resto=amt;
+    const tmp=Number(S.char.hptemp)||0;
+    if(tmp>0){ const usado=Math.min(tmp,resto); S.char.hptemp=tmp-usado; resto-=usado; }
+    S.char.hp=Math.max(0, S.char.hp-resto);
+  }else{
+    // cura: só os PV reais (temporários não se curam)
+    S.char.hp=Math.min(S.char.hpmax, S.char.hp+amt);
+  }
+  S.char.hplog=S.char.hplog||[];
+  S.char.hplog.push({v:sign*amt, t:S.char.turno||1});
+  if(S.char.hplog.length>60) S.char.hplog=S.char.hplog.slice(-60);
+  renderDerived(); save();
+}
+function editHpMax(){
+  const v=prompt("PV máximo:", S.char.hpmax);
+  if(v!==null && !isNaN(v) && Number(v)>0){ S.char.hpmax=Number(v); S.char.hp=Math.min(S.char.hp,S.char.hpmax); renderDerived(); save(); }
+}
+function toggleInsp(){ S.char.insp=!S.char.insp; renderDerived(); save(); }
+
+function renderDeath(){
+  [["dsS","s"],["dsF","f"]].forEach(([id,cls])=>{
+    const el=document.getElementById(id); el.innerHTML="";
+    for(let i=1;i<=3;i++){
+      const b=document.createElement("button");
+      b.className="dot "+cls+((cls==="s"?S.char.dsS:S.char.dsF)>=i?" on":"");
+      b.setAttribute("aria-label",(cls==="s"?"sucesso ":"falha ")+i);
+      b.onclick=()=>{ const k=cls==="s"?"dsS":"dsF";
+        S.char[k]=(S.char[k]===i)?i-1:i; renderDeath(); save(); };
+      el.appendChild(b);
+    }
+  });
+}
+function renderSkills(){
+  const el=document.getElementById("skillList"); el.innerHTML="";
+  S.char.skillExtra=S.char.skillExtra||{};
+  SKILLS.forEach(([nm,att])=>{
+    const on=!!S.char.profs[nm];
+    const extra=Number(S.char.skillExtra[nm])||0;
+    const bonus=mod(S.char.abs[att])+(on?profBonus(S.char.nivel):0)+extra;
+    const d=document.createElement("div"); d.className="skill";
+    d.innerHTML=`<button class="prof${on?" on":""}" aria-label="proficiência em ${nm}"></button>
+      <span>${nm} <span class="att">(${att.toUpperCase()})</span></span>
+      <input type="number" class="extra" value="${extra||""}" placeholder="±" aria-label="bônus extra em ${nm}">
+      <span class="bonus">${fmt(bonus)}</span>`;
+    d.querySelector(".prof").onclick=()=>{ S.char.profs[nm]=!on; renderSkills(); save(); };
+    d.querySelector(".extra").oninput=e=>{
+      S.char.skillExtra[nm]=Number(e.target.value)||0;
+      const b=mod(S.char.abs[att])+((S.char.profs[nm])?profBonus(S.char.nivel):0)+(Number(S.char.skillExtra[nm])||0);
+      d.querySelector(".bonus").textContent=fmt(b);
+      save();
+    };
+    el.appendChild(d);
+  });
+}
+function renderAtks(){
+  const el=document.getElementById("atkList"); el.innerHTML="";
+  S.char.atks.forEach((a,i)=>{
+    const d=document.createElement("div"); d.className="atk";
+    d.innerHTML=`
+      <div class="atkrow1">
+        <div><label>Ataque</label><input type="text" class="nm" placeholder="Espada longa" value="${a.n||""}"></div>
+        <div><label>Qtd/turno</label><input type="number" class="q" min="1" value="${a.q||1}" aria-label="ataques por turno"></div>
+        <button class="xbtn" aria-label="remover ataque">✕</button>
+      </div>
+      <div class="atkrow2">
+        <div><label>Bônus de ataque</label><input type="text" placeholder="+5" value="${a.b||""}"></div>
+        <div><label>Dano</label><input type="text" placeholder="1d8+3 cort." value="${a.d||""}"></div>
+      </div>`;
+    const ins=d.querySelectorAll("input");
+    ins[0].oninput=e=>{a.n=e.target.value;save();};
+    ins[1].oninput=e=>{a.q=Math.max(1,Number(e.target.value)||1);save();};
+    ins[2].oninput=e=>{a.b=e.target.value;save();};
+    ins[3].oninput=e=>{a.d=e.target.value;save();};
+    d.querySelector(".xbtn").onclick=()=>{S.char.atks.splice(i,1);renderAtks();save();};
+    el.appendChild(d);
+  });
+}
+function addAtk(){ S.char.atks.push({q:1,n:"",b:"",d:""}); renderAtks(); }
+
+/* ================== bolsa de moedas ================== */
+const MOEDAS=[["pc","PC"],["pp","PP"],["pe","PE"],["po","PO"],["pl","PL"]];
+function renderMoedas(){
+  S.char.moedas=S.char.moedas||{pc:0,pp:0,pe:0,po:0,pl:0};
+  const el=document.getElementById("moedasRow"); el.innerHTML="";
+  MOEDAS.forEach(([k,sig])=>{
+    const p=document.createElement("div"); p.className="pill";
+    p.innerHTML=`<div class="v"><input type="number" min="0" value="${S.char.moedas[k]||0}" aria-label="${sig}"
+      style="border:none;background:transparent;width:100%;text-align:center;font-weight:700;font-size:1rem;padding:0"></div>
+      <div class="k">${sig}</div>`;
+    p.querySelector("input").oninput=e=>{ S.char.moedas[k]=Number(e.target.value)||0; save(); };
+    el.appendChild(p);
+  });
+}
+
+/* ================== companheiros & familiares ================== */
+let openPet=null;
+function addPet(){
+  S.char.pets=S.char.pets||[];
+  const pt={id:"pt"+Date.now(), nome:"", tipo:"", ca:12, pvmax:5, pv:5, desloc:"9m", notas:""};
+  S.char.pets.unshift(pt); openPet=pt.id; renderPets(); save();
+}
+function renderPets(){
+  S.char.pets=S.char.pets||[];
+  const el=document.getElementById("petList"); el.innerHTML="";
+  if(!S.char.pets.length){ el.innerHTML='<div class="empty" style="padding:10px">Nenhum companheiro ainda — familiares, montarias, invocações.</div>'; return; }
+  S.char.pets.forEach(pt=>{
+    const open=openPet===pt.id;
+    const d=document.createElement("div");
+    d.style.cssText="border:1px solid var(--parch-line); border-radius:6px; background:#fff9ec; padding:8px 10px; margin-bottom:8px";
+    d.innerHTML=`
+      <div style="display:flex; align-items:center; gap:8px">
+        <h3 style="flex:1; font-size:.98rem"></h3>
+        <span class="cbadge">${pt.pv}/${pt.pvmax} PV</span>
+        <button class="chev${open?" open":""}" aria-label="detalhes">▸</button>
+        <button class="xbtn" aria-label="remover companheiro">✕</button>
+      </div>
+      <div class="det" style="display:${open?"block":"none"}; margin-top:8px"></div>`;
+    d.querySelector("h3").textContent=pt.nome||"(sem nome)";
+    d.querySelector(".chev").onclick=()=>{ openPet=open?null:pt.id; renderPets(); };
+    d.querySelector(".xbtn").onclick=()=>{
+      if(confirm(`Dispensar "${pt.nome||"companheiro"}"?`)){ S.char.pets=S.char.pets.filter(x=>x.id!==pt.id); renderPets(); save(); }
+    };
+    if(open){
+      const det=d.querySelector(".det");
+      det.innerHTML=`
+        <div class="row r2">
+          <div><label>Nome</label><input type="text" class="p-nome"></div>
+          <div><label>Tipo</label><input type="text" class="p-tipo" placeholder="corvo familiar, lobo..."></div>
+        </div>
+        <div class="row r3">
+          <div><label>CA</label><input type="number" class="p-ca"></div>
+          <div><label>PV máx</label><input type="number" class="p-pvmax"></div>
+          <div><label>Desloc.</label><input type="text" class="p-desl"></div>
+        </div>
+        <div class="hpbtns" style="flex-direction:row; justify-content:center; margin:6px 0">
+          <button class="btn-dmg" style="width:52px">−</button>
+          <input type="number" class="hpamt p-amt" value="1" min="1" style="width:52px">
+          <button class="btn-heal" style="width:52px">+</button>
+        </div>
+        <label>Notas &amp; ataques</label>
+        <textarea class="p-notas" style="min-height:56px" placeholder="Bico +4, 1 perfurante. Entrega toques mágicos. Visão no escuro..."></textarea>`;
+      const g=c=>det.querySelector(c);
+      g(".p-nome").value=pt.nome; g(".p-tipo").value=pt.tipo; g(".p-ca").value=pt.ca;
+      g(".p-pvmax").value=pt.pvmax; g(".p-desl").value=pt.desloc; g(".p-notas").value=pt.notas;
+      g(".p-nome").oninput=e=>{pt.nome=e.target.value; d.querySelector("h3").textContent=pt.nome||"(sem nome)"; save();};
+      g(".p-tipo").oninput=e=>{pt.tipo=e.target.value; save();};
+      g(".p-ca").oninput=e=>{pt.ca=Number(e.target.value)||0; save();};
+      g(".p-pvmax").oninput=e=>{pt.pvmax=Math.max(1,Number(e.target.value)||1); pt.pv=Math.min(pt.pv,pt.pvmax); renderPets(); save();};
+      g(".p-desl").oninput=e=>{pt.desloc=e.target.value; save();};
+      g(".p-notas").oninput=e=>{pt.notas=e.target.value; save();};
+      det.querySelector(".btn-dmg").onclick=()=>{ const a=Math.max(1,Number(g(".p-amt").value)||1); pt.pv=Math.max(0,pt.pv-a); renderPets(); save(); };
+      det.querySelector(".btn-heal").onclick=()=>{ const a=Math.max(1,Number(g(".p-amt").value)||1); pt.pv=Math.min(pt.pvmax,pt.pv+a); renderPets(); save(); };
+    }
+    el.appendChild(d);
+  });
+}
+
+/* ================== magias ================== */
+const CIRC = c => c===0 ? "Truque" : c+"º";
+function slotOf(c){ if(!S.char.slots[c]) S.char.slots[c]={t:0,u:0}; return S.char.slots[c]; }
+function renderSlots(){
+  const el=document.getElementById("slotList"); el.innerHTML="";
+  // mostra sempre 1º–5º; 6º–9º aparecem se tiverem total > 0 ou se um círculo acima tiver
+  for(let c=1;c<=9;c++){
+    const s=slotOf(c);
+    const d=document.createElement("div"); d.className="slotrow";
+    let gems="";
+    for(let i=1;i<=s.t;i++){
+      const spent=i<=s.u;
+      gems+=`<button class="gem${spent?" spent":""}" data-i="${i}" aria-label="espaço ${i} do ${c}º círculo ${spent?"gasto":"disponível"}">${spent?"◇":"◆"}</button>`;
+    }
+    d.innerHTML=`<div class="circ">${c}º</div><div class="gems">${gems||'<span style="font-size:.75rem;color:#8a755a">—</span>'}</div>
+      <div class="tot"><input type="number" min="0" max="4" value="${s.t}" aria-label="total de espaços do ${c}º círculo"><span>tot</span></div>`;
+    d.querySelectorAll(".gem").forEach(g=>{
+      g.onclick=()=>{
+        const i=Number(g.dataset.i);
+        s.u = (i<=s.u) ? i-1 : i;   // toca no ◆: gasta até ele; toca no ◇: recupera até ele
+        renderSlots(); save();
+      };
+    });
+    d.querySelector(".tot input").addEventListener("input",ev=>{
+      s.t=Math.max(0,Math.min(4,Number(ev.target.value)||0));
+      s.u=Math.min(s.u,s.t);
+      renderSlots(); save();
+    });
+    el.appendChild(d);
+  }
+}
+function longRest(){
+  for(const c in S.char.slots) S.char.slots[c].u=0;
+  S.char.hp=S.char.hpmax; S.char.hptemp=0; S.char.dsS=0; S.char.dsF=0;
+  renderSlots(); renderDerived(); renderDeath(); save();
+  setSaveState("descanso longo: PV e espaços recuperados ✧",true);
+}
+let openSpell=null; // id da magia com anotações abertas
+function renderSpells(){
+  const el=document.getElementById("spellList"); el.innerHTML="";
+  if(!S.char.spells.length){
+    el.innerHTML='<div class="empty" style="padding:12px">Nenhuma magia registrada ainda.</div>'; return;
+  }
+  S.char.spells.forEach(sp=>{ if(!sp.id) sp.id="sp"+Math.random().toString(36).slice(2,9); });
+  [...S.char.spells].map((sp,idx)=>({sp,idx}))
+    .sort((a,b)=>a.sp.c-b.sp.c || (a.sp.n||"").localeCompare(b.sp.n||""))
+    .forEach(({sp,idx})=>{
+      const open=openSpell===sp.id;
+      const d=document.createElement("div"); d.className="spell";
+      d.innerHTML=`<button class="prep${sp.p?" on":""}" aria-label="${sp.p?"preparada":"não preparada"}"></button>
+        <input type="text" placeholder="nome da magia">
+        <span class="cbadge">${CIRC(sp.c)}</span>
+        <button class="chev${sp.d?" has":""}${open?" open":""}" aria-label="${open?"fechar":"abrir"} anotações de ${sp.n||"magia"}">▸</button>
+        <button class="xbtn" aria-label="remover magia">✕</button>`;
+      const inp=d.querySelector("input"); inp.value=sp.n||"";
+      inp.oninput=e=>{ sp.n=e.target.value; save(); };
+      d.querySelector(".prep").onclick=()=>{ sp.p=!sp.p; renderSpells(); save(); };
+      d.querySelector(".chev").onclick=()=>{ openSpell=open?null:sp.id; renderSpells(); };
+      d.querySelector(".xbtn").onclick=()=>{
+        S.char.spells.splice(idx,1); if(openSpell===sp.id) openSpell=null;
+        renderSpells(); save();
+      };
+      el.appendChild(d);
+      if(open){
+        const det=document.createElement("div"); det.className="spelldetail";
+        det.innerHTML=`<textarea placeholder="Alcance, dano, duração, componentes, concentração, como escala..."></textarea>`;
+        const ta=det.querySelector("textarea"); ta.value=sp.d||"";
+        ta.oninput=e=>{ sp.d=e.target.value; save(); };
+        el.appendChild(det);
+        ta.focus();
+      }
+    });
+}
+function addSpell(){
+  const n=document.getElementById("spName").value.trim();
+  const c=Number(document.getElementById("spCirc").value);
+  if(!n){ document.getElementById("spName").focus(); return; }
+  const sp={id:"sp"+Date.now(), n, c, p:true, d:""};
+  S.char.spells.push(sp);
+  document.getElementById("spName").value="";
+  openSpell=sp.id;           // já abre as anotações da magia recém-criada
+  renderSpells(); save();
+}
+
+function selSet(sel,val){   // garante que valores fora da lista (ex.: multiclasse) apareçam no select
+  if(val && ![...sel.options].some(o=>o.value===val)){
+    const o=document.createElement("option"); o.value=val; o.textContent=val;
+    sel.insertBefore(o, sel.querySelector('option[value="__outra"]'));
+  }
+  sel.value=val??"";
+}
+function bindFields(){
+  document.querySelectorAll("[data-k]").forEach(inp=>{
+    const k=inp.dataset.k;
+    if(inp.tagName==="SELECT") selSet(inp, S.char[k]??""); else inp.value=S.char[k]??"";
+    if(inp.dataset.bound) return;   // liga o evento uma vez só; trocas de herói apenas atualizam o valor
+    inp.dataset.bound="1";
+    if(inp.tagName==="SELECT"){
+      inp.addEventListener("change",()=>{
+        let v=inp.value;
+        if(v==="__outra"){
+          v=prompt("Digite a classe (ou combinação de multiclasse):", S.char[k]||"")||"";
+          selSet(inp, v);
+        }
+        S.char[k]=v; save();
+      });
+      return;
+    }
+    inp.addEventListener("input",()=>{
+      S.char[k]=inp.type==="number"?(inp.value===""?"":Number(inp.value)):inp.value;
+      if(k==="nivel"){ renderDerived(); renderSkills(); }
+      if(k==="nome") whoami();
+      save();
+    });
+  });
+}
+
+/* ================== anotações ================== */
+let editingId=null;
+function renderNotes(){
+  const q=(document.getElementById("noteSearch").value||"").toLowerCase();
+  const el=document.getElementById("noteList"); el.innerHTML="";
+  const list=S.notes.filter(n=>!q||(n.t+" "+n.b).toLowerCase().includes(q))
+                    .sort((a,b)=>b.ts-a.ts);
+  if(!list.length){
+    el.innerHTML=`<div class="empty">${q?"Nada encontrado com esse termo.":"Seu diário está em branco. Toque em “Nova” para registrar a primeira sessão."}</div>`;
+    return;
+  }
+  list.forEach(n=>{
+    const d=document.createElement("div"); d.className="card note";
+    const dt=new Date(n.ts).toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"});
+    d.innerHTML=`<h3></h3><div class="dt">${dt}</div><p></p>`;
+    d.querySelector("h3").textContent=n.t||"(sem título)";
+    d.querySelector("p").textContent=n.b||"";
+    d.onclick=()=>openNote(n.id);
+    el.appendChild(d);
+  });
+}
+function openNote(id){
+  editingId=id;
+  const ed=document.getElementById("noteEditor");
+  ed.style.display="block";
+  const n=S.notes.find(x=>x.id===id);
+  document.getElementById("neTitle").textContent=n?"Editar anotação":"Nova anotação";
+  document.getElementById("neT").value=n?n.t:"";
+  document.getElementById("neB").value=n?n.b:"";
+  document.getElementById("neDel").style.display=n?"block":"none";
+  ed.scrollIntoView({behavior:"smooth"});
+  document.getElementById("neT").focus();
+}
+function closeNote(){ document.getElementById("noteEditor").style.display="none"; editingId=null; }
+function saveNote(){
+  const t=document.getElementById("neT").value.trim();
+  const b=document.getElementById("neB").value;
+  if(!t && !b.trim()){ closeNote(); return; }
+  if(editingId){
+    const n=S.notes.find(x=>x.id===editingId); n.t=t; n.b=b;
+  }else{
+    S.notes.push({id:"n"+Date.now(), t, b, ts:Date.now()});
+  }
+  save(); closeNote(); renderNotes();
+}
+function delNote(){
+  if(!editingId) return;
+  if(!confirm("Apagar esta anotação? Isso não pode ser desfeito.")) return;
+  S.notes=S.notes.filter(x=>x.id!==editingId);
+  save(); closeNote(); renderNotes();
+}
+
+/* ================== exportar PDF ================== */
+function exportPDF(){
+  if(typeof window.jspdf==="undefined"){
+    alert("Não consegui carregar o gerador de PDF. Verifique a conexão e tente de novo.");
+    return;
+  }
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const W=210, MX=16; let y=0;
+  const INK=[43,33,21], SOFT=[93,76,51], GOLD=[150,115,25], PARCH=[244,236,216];
+
+  const ensure=(need)=>{ if(y+need>282){ doc.addPage(); y=16; } };
+  const hr=()=>{ doc.setDrawColor(...GOLD); doc.setLineWidth(.4); doc.line(MX,y,W-MX,y); y+=5; };
+  const section=(t)=>{ ensure(14); y+=4;
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...GOLD);
+    doc.text(t.toUpperCase(),MX,y); y+=2.5; hr(); doc.setTextColor(...INK); };
+  const kv=(pairs)=>{ // pares [rótulo, valor] em 2 colunas
+    doc.setFontSize(10);
+    for(let i=0;i<pairs.length;i+=2){
+      ensure(7);
+      [0,1].forEach(j=>{
+        const p=pairs[i+j]; if(!p) return;
+        const x=MX+j*(W/2-MX);
+        doc.setFont("helvetica","bold"); doc.setTextColor(...SOFT);
+        doc.text(p[0]+":",x,y);
+        doc.setFont("helvetica","normal"); doc.setTextColor(...INK);
+        doc.text(String(p[1]??"—"),x+doc.getTextWidth(p[0]+": ")+1,y);
+      });
+      y+=6;
+    }
+  };
+  const block=(txt)=>{ if(!txt||!txt.trim()){ doc.setFont("helvetica","italic"); doc.setTextColor(...SOFT); doc.text("—",MX,y); doc.setTextColor(...INK); y+=6; return; }
+    doc.setFont("helvetica","normal"); doc.setFontSize(10);
+    doc.splitTextToSize(txt,W-2*MX).forEach(ln=>{ ensure(6); doc.text(ln,MX,y); y+=5.2; }); y+=2; };
+
+  // Cabeçalho em pergaminho
+  doc.setFillColor(...PARCH); doc.rect(0,0,W,34,"F");
+  doc.setDrawColor(...GOLD); doc.setLineWidth(.8); doc.line(MX,30,W-MX,30);
+  doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(...INK);
+  doc.text(S.char.nome||"Aventureiro sem nome",W/2,15,{align:"center"});
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...SOFT);
+  const sub=[S.char.jogador&&`jogador: ${S.char.jogador}`,S.char.classe&&`${S.char.classe} ${S.char.nivel}`,S.char.subclasse,S.char.especie,S.char.antecedente].filter(Boolean).join("  •  ");
+  doc.text(sub||"D&D 2024",W/2,23,{align:"center"});
+  y=42;
+
+  // Atributos
+  section("Atributos");
+  const colW=(W-2*MX)/6;
+  ABS.forEach(([k,nm],i)=>{
+    const x=MX+i*colW+colW/2;
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...SOFT);
+    doc.text(nm.substring(0,3).toUpperCase(),x,y,{align:"center"});
+    doc.setFontSize(14); doc.setTextColor(...INK);
+    doc.text(fmt(mod(S.char.abs[k])),x,y+7,{align:"center"});
+    doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...SOFT);
+    doc.text(String(S.char.abs[k]),x,y+13,{align:"center"});
+  });
+  doc.setTextColor(...INK); y+=20;
+
+  // Combate
+  section("Combate");
+  kv([["PV",`${S.char.hp} / ${S.char.hpmax}${(Number(S.char.hptemp)||0)>0?` (+${S.char.hptemp} temp)`:""}`],["CA",S.char.ca],
+      ["Iniciativa",fmt(mod(S.char.abs.des)+(Number(S.char.initExtra)||0))],["Deslocamento",S.char.desloc],
+      ["Proficiência",fmt(profBonus(S.char.nivel))],["Inspiração Heroica",S.char.insp?"Sim":"Não"]]);
+
+  // Perícias (só as proficientes ou com bônus extra)
+  const sx=S.char.skillExtra||{};
+  const profs=SKILLS.filter(([nm])=>S.char.profs[nm]||sx[nm]);
+  if(profs.length){
+    section("Perícias");
+    doc.setFontSize(10);
+    profs.forEach(([nm,att],i)=>{
+      ensure(6);
+      const x=MX+(i%2)*(W/2-MX);
+      const bonus=fmt(mod(S.char.abs[att])+(S.char.profs[nm]?profBonus(S.char.nivel):0)+(Number(sx[nm])||0));
+      doc.setFont("helvetica","normal");
+      doc.text(`${nm} (${att.toUpperCase()})${S.char.profs[nm]?" •":""}`,x,y);
+      doc.setFont("helvetica","bold");
+      doc.text(bonus,x+62,y);
+      if(i%2===1||i===profs.length-1)y+=6;
+    });
+    y+=2;
+  }
+
+  // Ataques
+  const atks=S.char.atks.filter(a=>(a.n||a.b||a.d));
+  if(atks.length){
+    section("Ataques");
+    atks.forEach(a=>{ ensure(6);
+      doc.setFont("helvetica","bold"); doc.setFontSize(10);
+      doc.text(`${a.q&&a.q>1?a.q+"× ":""}${a.n||"—"}`,MX,y);
+      doc.setFont("helvetica","normal");
+      doc.text(`${a.b||""}   ${a.d||""}`.trim(),MX+70,y); y+=6; });
+    y+=2;
+  }
+
+  // Companheiros
+  const pets=(S.char.pets||[]).filter(p=>p.nome||p.notas);
+  if(pets.length){
+    section("Companheiros & Familiares");
+    pets.forEach(p=>{ ensure(7);
+      doc.setFont("helvetica","bold"); doc.setFontSize(10);
+      doc.text(`${p.nome||"—"}${p.tipo?" ("+p.tipo+")":""}`,MX,y);
+      doc.setFont("helvetica","normal");
+      doc.text(`CA ${p.ca}  PV ${p.pv}/${p.pvmax}  ${p.desloc||""}`,MX+80,y); y+=5.5;
+      if(p.notas&&p.notas.trim()){
+        doc.setFont("helvetica","italic"); doc.setFontSize(8.5); doc.setTextColor(...SOFT);
+        doc.splitTextToSize(p.notas.trim(),W-2*MX-8).forEach(ln=>{ ensure(5); doc.text(ln,MX+6,y); y+=4.4; });
+        doc.setTextColor(...INK); y+=1;
+      }
+    });
+    y+=2;
+  }
+
+  // Blocos de texto
+  section("Características"); block(S.char.carac);
+  section("Traços de Espécie"); block(S.char.tracos);
+  section("Talentos"); block(S.char.talentos);
+  section("Treinamento & Proficiências"); block(S.char.trein);
+  section("Idiomas"); block(S.char.idiomas);
+  section("Magias");
+  if(S.char.cdmag||S.char.atqmag) kv([["CD de magia",S.char.cdmag],["Bônus de ataque",S.char.atqmag]]);
+  const circs=Object.keys(S.char.slots||{}).map(Number).filter(c=>S.char.slots[c].t>0).sort((a,b)=>a-b);
+  if(circs.length){
+    ensure(8); doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...SOFT);
+    doc.text("ESPAÇOS:",MX,y); doc.setFont("helvetica","normal"); doc.setTextColor(...INK);
+    doc.text(circs.map(c=>`${c}º: ${S.char.slots[c].t-S.char.slots[c].u}/${S.char.slots[c].t}`).join("    "),MX+22,y);
+    y+=7;
+  }
+  const spells=(S.char.spells||[]).filter(sp=>sp.n);
+  if(spells.length){
+    [...spells].sort((a,b)=>a.c-b.c||(a.n||"").localeCompare(b.n||"")).forEach(sp=>{
+      ensure(7);
+      doc.setFont("helvetica",sp.p?"bold":"normal"); doc.setFontSize(10); doc.setTextColor(...INK);
+      doc.text(`${sp.p?"• ":"  "}${sp.n} (${sp.c===0?"truque":sp.c+"º"})`,MX,y); y+=5.2;
+      if(sp.d && sp.d.trim()){
+        doc.setFont("helvetica","italic"); doc.setFontSize(8.5); doc.setTextColor(...SOFT);
+        doc.splitTextToSize(sp.d.trim(),W-2*MX-8).forEach(ln=>{ ensure(5); doc.text(ln,MX+6,y); y+=4.4; });
+        doc.setTextColor(...INK); y+=1;
+      }
+    });
+    doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...SOFT);
+    ensure(5); doc.text("• em negrito = preparada",MX,y); y+=6; doc.setTextColor(...INK);
+  }
+  block(S.char.magias);
+  section("Equipamento & Tesouro");
+  const mo=S.char.moedas||{};
+  if(Object.values(mo).some(v=>v)){
+    ensure(7); doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...SOFT);
+    doc.text("MOEDAS:",MX,y); doc.setFont("helvetica","normal"); doc.setTextColor(...INK);
+    doc.text([["pc","PC"],["pp","PP"],["pe","PE"],["po","PO"],["pl","PL"]]
+      .filter(([k])=>mo[k]).map(([k,s])=>`${mo[k]} ${s}`).join("   "),MX+20,y);
+    y+=7;
+  }
+  block(S.char.equip);
+
+  // Anotações
+  if(S.notes.length){
+    doc.addPage(); y=16;
+    doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(...INK);
+    doc.text("Diário de Campanha",W/2,y,{align:"center"}); y+=4; hr();
+    [...S.notes].sort((a,b)=>a.ts-b.ts).forEach(n=>{
+      ensure(16);
+      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(...INK);
+      doc.text(n.t||"(sem título)",MX,y);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...SOFT);
+      doc.text(new Date(n.ts).toLocaleDateString("pt-BR"),W-MX,y,{align:"right"});
+      y+=6; doc.setTextColor(...INK); block(n.b); y+=2;
+    });
+  }
+
+  const fname=(S.char.nome||"ficha-dnd").toLowerCase().replace(/[^a-z0-9]+/g,"-")+".pdf";
+  doc.save(fname);
+  setSaveState("PDF gerado ✧",true);
+}
+
+/* ================== enviar ao mestre ================== */
+async function exportToDM(){
+  // só a ficha do herói aberto — o diário de anotações é pessoal e NÃO vai junto
+  const payload={app:"grimorio-dnd", tipo:"heroi", versao:2,
+    exportadoEm:new Date().toISOString(), dados:{char:S.char}};
+  const json=JSON.stringify(payload,null,2);
+  const nome=(S.char.nome||"heroi").toLowerCase().replace(/[^a-z0-9]+/g,"-");
+  const fname=`heroi-${nome}-nivel${S.char.nivel||1}.json`;
+  const file=new File([json], fname, {type:"application/json"});
+  // tenta o compartilhamento nativo do Android (WhatsApp, Telegram, e-mail...)
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file], title:"Ficha de "+(S.char.nome||"herói"),
+        text:`Ficha de ${S.char.nome||"herói"} (nível ${S.char.nivel||1}) — importar no Escudo do Mestre.`});
+      setSaveState("ficha compartilhada ✧",true);
+      return;
+    }catch(e){ if(e && e.name==="AbortError") return; /* usuário cancelou */ }
+  }
+  // fallback: baixa o arquivo para anexar manualmente
+  const blob=new Blob([json],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=fname; a.click();
+  URL.revokeObjectURL(a.href);
+  setSaveState("ficha baixada — anexe o arquivo no WhatsApp do mestre ✧",true);
+}
+
+/* ================== backup & restauração ================== */
+function exportData(){
+  const payload={app:"grimorio-dnd", versao:2, exportadoEm:new Date().toISOString(), dados:R};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`backup-grimorio-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setSaveState("backup da galeria baixado ✧",true);
+}
+function importData(inp){
+  const f=inp.files && inp.files[0];
+  if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const p=JSON.parse(rd.result);
+      const d=p.dados||p;
+      if(Array.isArray(d.chars)){
+        // backup novo: galeria completa
+        if(!confirm(`Restaurar a galeria com ${d.chars.length} herói(s)? Isso substitui TODOS os personagens atuais.`)) return;
+        R={version:2, currentId:d.currentId||null, chars:d.chars.map(migrateEntry),
+           fb:R.fb, wall:d.wall||R.wall, wallDim:d.wallDim??R.wallDim, mapaAnotacoes:d.mapaAnotacoes||R.mapaAnotacoes||{src:"",ops:[]}, uiPos:d.uiPos||R.uiPos||{}};
+        if(!R.chars.length) R.chars=[blankEntry()];
+        S=R.chars.find(c=>c.id===R.currentId)||R.chars[0]; R.currentId=S.id;
+      }else if(d.char && typeof d.char==="object"){
+        // backup antigo (um personagem): entra como herói novo, sem apagar nada
+        const e=migrateEntry({...blankEntry(), char:d.char, notes:d.notes||[]});
+        if(!confirm(`Adicionar "${e.char.nome||"herói sem nome"}" à galeria (${(e.notes||[]).length} anotação(ões))?`)) return;
+        R.chars.push(e); S=e; R.currentId=e.id;
+      }else throw new Error("formato");
+      renderAll(); renderRoster(); save();
+      setSaveState("backup restaurado ✧",true);
+    }catch(e){
+      alert("Este arquivo não parece ser um backup do Grimório. Escolha o arquivo .json gerado pelo botão \u201csalvar backup\u201d.");
+    }finally{ inp.value=""; }
+  };
+  rd.readAsText(f);
+}
+
+/* ================== wallpaper ================== */
+function applyWall(){
+  const dim=((R.wallDim??82))/100;
+  if(R.wall){
+    document.body.style.backgroundImage=
+      `linear-gradient(rgba(26,17,15,${dim}), rgba(26,17,15,${Math.min(1,dim+0.04)})), url(${R.wall})`;
+    document.body.style.backgroundSize="cover";
+    document.body.style.backgroundPosition="center";
+    document.body.style.backgroundAttachment="fixed";
+  }else{
+    document.body.style.backgroundImage="";
+    document.body.style.backgroundSize="";
+    document.body.style.backgroundPosition="";
+    document.body.style.backgroundAttachment="";
+  }
+  const sl=document.getElementById("wallDim");
+  if(sl){ sl.value=R.wallDim??82;
+    if(!sl.dataset.bound){ sl.dataset.bound="1";
+      sl.oninput=e=>{ R.wallDim=Number(e.target.value); applyWall(); save(); }; } }
+}
+function wallEscolher(inp){
+  const f=inp.files && inp.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=1600;
+      const esc=Math.min(1, MAX/Math.max(img.width,img.height));
+      const cv=document.createElement("canvas");
+      cv.width=Math.round(img.width*esc); cv.height=Math.round(img.height*esc);
+      cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+      const data=cv.toDataURL("image/jpeg",0.78);
+      if(data.length>3500000){
+        alert("Essa imagem ficou grande demais para guardar — tente uma foto menor ou mais simples.");
+        return;
+      }
+      R.wall=data; applyWall(); save();
+      setSaveState("wallpaper aplicado ✧",true);
+    };
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(f);
+  inp.value="";
+}
+function wallRemover(){
+  R.wall=""; applyWall(); save();
+  setSaveState("wallpaper removido",true);
+}
+
+/* ================== mesa online (Firebase) ================== */
+const FB_CFG_PADRAO={apiKey:"AIzaSyDHi6kej7Nmhv_u932lzRqfOXeW2j79cS8",authDomain:"mesa-dnd-8076d.firebaseapp.com",projectId:"mesa-dnd-8076d",storageBucket:"mesa-dnd-8076d.firebasestorage.app",messagingSenderId:"869616715507",appId:"1:869616715507:web:8fcb61c67b5f4c3bc69986",measurementId:"G-60QWNY0FJG"};
+function fbParseCfg(txt){
+  if(!txt||!txt.trim()) return null;
+  let t=txt.trim();
+  // aceita o bloco inteiro copiado do console ("const firebaseConfig = {...};")
+  const a=t.indexOf("{"), b=t.lastIndexOf("}");
+  if(a>=0&&b>a) t=t.slice(a,b+1);
+  try{ const o=JSON.parse(t); return (o&&o.apiKey&&o.projectId)?o:null; }catch(e){}
+  // tolerante ao formato JavaScript: aspas simples, chaves sem aspas, vírgula final, comentários
+  let s=t.replace(/\/\/[^\n]*/g,"")
+         .replace(/'/g,'"')
+         .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g,'$1"$2":')
+         .replace(/,\s*}/g,"}");
+  try{ const o=JSON.parse(s); return (o&&o.apiKey&&o.projectId)?o:null; }catch(e){ return null; }
+}
+let fbApp=null, fbDb=null, fbUnsub=null, fbOk=false, fbPushTimer=null;
+function fbStatus(t,ok){ const e=document.getElementById("fbStatus");
+  if(e){ e.textContent=t; e.style.color=ok?"var(--gold)":"var(--ink-soft)"; } }
+function fbBindUi(){
+  const cfg=document.getElementById("fbCfg"), sala=document.getElementById("fbSala"), btn=document.getElementById("fbBtn");
+  if(!cfg) return;
+  R.fb=R.fb||{}; S.sync=S.sync||{sala:"", on:false};
+  cfg.value=R.fb.cfg||""; sala.value=S.sync.sala||"";
+  btn.textContent=S.sync.on?"✦ conectado — tocar para desligar":"conectar este herói";
+  if(!cfg.dataset.bound){ cfg.dataset.bound="1"; cfg.oninput=e=>{ R.fb.cfg=e.target.value; save(); }; }
+  if(!sala.dataset.bound){ sala.dataset.bound="1";
+    sala.oninput=e=>{ S.sync.sala=e.target.value.trim().toUpperCase(); save(); }; }
+}
+function fbToggle(){
+  S.sync=S.sync||{sala:"", on:false};
+  if(S.sync.on){ S.sync.on=false; if(fbUnsub){try{fbUnsub();}catch(e){}} fbUnsub=null; fbOk=false;
+    fbStatus("desconectado"); fbBindUi(); save(); return; }
+  S.sync.on=true; save(); fbBindUi(); fbConectar(true);
+}
+async function fbConectar(manual){
+  if(fbUnsub){ try{fbUnsub();}catch(e){} fbUnsub=null; }
+  fbOk=false;
+  if(!S.sync||!S.sync.on) return;
+  if(typeof firebase==="undefined"){ fbStatus("Firebase indisponível — verifique a conexão (funciona no app instalado)"); return; }
+  R.fb=R.fb||{};
+  if(!S.sync.sala){ if(manual) fbStatus("digite o código da sala do mestre"); return; }
+  const cfg=fbParseCfg(R.fb.cfg)||FB_CFG_PADRAO;
+  try{
+    if(!fbApp){ fbApp=firebase.initializeApp(cfg); }
+    fbDb=firebase.firestore();
+    await firebase.auth().signInAnonymously();
+    const sala=S.sync.sala, heroiId=S.id;
+    fbOk=true;          // conectado ANTES do primeiro envio (senão ele é ignorado)
+    fbPushHero();       // envia a ficha atual imediatamente
+    // 1) edições feitas pelo mestre no Escudo chegam aqui e atualizam a ficha
+    const u1=fbDb.collection("salas").doc(sala).collection("herois").doc(heroiId)
+      .onSnapshot(doc=>{
+        if(!S||S.id!==heroiId||!S.sync||!S.sync.on) return;
+        const d=doc.data();
+        if(!d||!d.char||d.editor!=="mestre") return;      // só aplica o que veio do mestre
+        if(S.sync.lastMestre===d.up) return;               // já aplicado
+        S.sync.lastMestre=d.up;
+        S.char={...S.char,...d.char};
+        renderAll(); save();
+        setSaveState("✦ ficha atualizada pelo mestre",true);
+      }, ()=>{});
+    // 1.5) mapa da campanha enviado pelo mestre
+    const uM=fbDb.collection("salas").doc(sala).collection("mapa").doc("atual")
+      .onSnapshot(doc=>{
+        const d=doc.data();
+        if(d&&d.img) mapaReceber(d.img);
+      }, ()=>{});
+    // 2) itens entregues/vendidos
+    const u2=fbDb.collection("salas").doc(sala).collection("entregas")
+      .onSnapshot(snap=>{
+        if(!S||S.id!==heroiId||!S.sync||!S.sync.on) return;
+        snap.forEach(doc=>{
+          const d=doc.data();
+          if(!d||d.recebida) return;
+          const meu=(d.heroiId&&d.heroiId===S.id)
+            ||(!d.heroiId&&d.heroiNome&&d.heroiNome.toLowerCase()===(S.char.nome||"").trim().toLowerCase());
+          if(!meu) return;
+          fbAplicarEntrega(d);
+          doc.ref.update({recebida:true}).catch(()=>{});
+        });
+      }, err=>{ fbStatus("erro na sala: "+(err.code||err.message)); fbOk=false; });
+    // 3) presença: nomes dos heróis conectados na sala
+    const u3=fbDb.collection("salas").doc(sala).collection("herois")
+      .onSnapshot(snap=>{
+        fbPres=[];
+        snap.forEach(doc=>{ const d=doc.data();
+          if(d&&d.char) fbPres.push({id:doc.id, nome:d.char.nome||d.nome||"herói", jog:d.char.jogador||""}); });
+        renderPresenca(); chatParaOpcoes();
+      }, ()=>{});
+    // 4) chat da mesa
+    fbChatLast=Date.now();
+    const u4=fbDb.collection("salas").doc(sala).collection("chat")
+      .onSnapshot(snap=>{
+        fbChat=[];
+        snap.forEach(doc=>{ const m=doc.data(); if(m&&m.texto) fbChat.push(m); });
+        fbChat.sort((a,b)=>(a.ts||0)-(b.ts||0));
+        if(fbChat.length>120) fbChat=fbChat.slice(-120);
+        const novas=fbChat.filter(m=>chatVisivel(m)&&m.ts>fbChatLast&&m.deId!==S.id);
+        if(novas.length){ fbChatLast=novas[novas.length-1].ts;
+          novas.forEach(m=>mostrarToast(m)); }
+        renderChat();
+      }, ()=>{});
+    fbUnsub=()=>{ try{u1();}catch(e){} try{uM();}catch(e){} try{u2();}catch(e){} try{u3();}catch(e){} try{u4();}catch(e){} };
+    fbStatus("✦ sala "+sala+" conectada — ficha sincronizando",true);
+  }catch(e){ fbStatus("falha ao conectar: "+(e.code||e.message)); }
+}
+function fbPushHero(){
+  if(!fbOk||!fbDb||!S.sync||!S.sync.on||!S.sync.sala) return;
+  clearTimeout(fbPushTimer);
+  fbPushTimer=setTimeout(()=>{
+    try{
+      fbDb.collection("salas").doc(S.sync.sala).collection("herois").doc(S.id)
+        .set({nome:S.char.nome||"", char:JSON.parse(JSON.stringify(S.char)), up:Date.now(), editor:"jogador"});
+    }catch(e){}
+  },1500);
+}
+function fbAplicarEntrega(d){
+  const rot=d.texto||"item";
+  let linha="• "+rot+(d.venda?` — comprado por ${d.totalPO||0} PO`:" — recebido do mestre");
+  if(d.venda && d.totalPO>0){
+    S.char.moedas=S.char.moedas||{pc:0,pp:0,pe:0,po:0,pl:0};
+    if(S.char.moedas.po>=d.totalPO){ S.char.moedas.po=Math.round((S.char.moedas.po-d.totalPO)*100)/100; }
+    else { linha+=" (saldo de PO insuficiente — acerte com o mestre)"; }
+  }
+  S.char.equip=(S.char.equip?S.char.equip+"\n":"")+linha;
+  const eq=document.getElementById("c_equip"); if(eq) eq.value=S.char.equip;
+  renderMoedas(); save();
+  setSaveState("✦ "+rot+(d.venda?" comprado":" recebido")+" do mestre!",true);
+}
+
+/* ================== biblioteca rápida de regras (SRD 5.2, CC-BY-4.0) ================== */
+const REFLIB=[
+ {cat:"Condições", n:"Agarrado", d:"Deslocamento 0. Termina se quem agarra ficar Incapacitado ou se você for movido para fora do alcance dele."},
+ {cat:"Condições", n:"Amedrontado", d:"Desvantagem em ataques e testes de atributo enquanto a fonte do medo estiver à vista; não pode se aproximar dela de boa vontade."},
+ {cat:"Condições", n:"Aprisionado", d:"Deslocamento 0; desvantagem em ataques e em salvaguardas de Destreza; ataques contra você têm vantagem."},
+ {cat:"Condições", n:"Caído", d:"Só pode rastejar (ou gastar metade do deslocamento para ficar de pé); desvantagem em ataques; corpo a corpo contra você tem vantagem, à distância tem desvantagem."},
+ {cat:"Condições", n:"Cego", d:"Falha automaticamente em testes que dependam de visão; desvantagem em ataques; ataques contra você têm vantagem."},
+ {cat:"Condições", n:"Enfeitiçado", d:"Não pode atacar nem visar quem o enfeitiçou com efeitos prejudiciais; quem o enfeitiçou tem vantagem em testes sociais com você."},
+ {cat:"Condições", n:"Envenenado", d:"Desvantagem em jogadas de ataque e em testes de atributo."},
+ {cat:"Condições", n:"Exausto", d:"Níveis de 1 a 6: cada nível dá −2 em testes de d20 por nível e reduz o deslocamento em 1,5m por nível; no nível 6, morte. Descanso longo remove 1 nível."},
+ {cat:"Condições", n:"Incapacitado", d:"Não pode realizar ações nem reações."},
+ {cat:"Condições", n:"Inconsciente", d:"Incapacitado, não percebe o ambiente, cai e larga o que segura. Ataques contra você têm vantagem; acertos corpo a corpo a até 1,5m são críticos automáticos."},
+ {cat:"Condições", n:"Invisível", d:"Impossível de ver sem magia ou sentido especial. Vantagem nos seus ataques; desvantagem nos ataques contra você."},
+ {cat:"Condições", n:"Paralisado", d:"Incapacitado, não pode se mover nem falar. Falha automática em salvaguardas de Força e Destreza. Ataques contra você têm vantagem; acertos corpo a corpo a até 1,5m são críticos automáticos."},
+ {cat:"Condições", n:"Petrificado", d:"Transformado em substância sólida; incapacitado e alheio ao ambiente. Resistência a todo dano; imune a veneno e doença."},
+ {cat:"Condições", n:"Surdo", d:"Falha automaticamente em testes que dependam de audição."},
+ {cat:"Ações em Combate", n:"Ataque", d:"Use sua ação para atacar com arma ou efeito de combate corpo a corpo/à distância. Alguns recursos concedem ataques extras."},
+ {cat:"Ações em Combate", n:"Correr (Disparada)", d:"Ganha deslocamento extra igual ao seu deslocamento normal neste turno."},
+ {cat:"Ações em Combate", n:"Desengajar", d:"Seu deslocamento não provoca ataques de oportunidade até o fim do turno."},
+ {cat:"Ações em Combate", n:"Esconder-se", d:"Faz um teste de Furtividade para tentar ficar Indetectável; exige estar fora da vista de quem você quer enganar."},
+ {cat:"Ações em Combate", n:"Ajudar", d:"Concede vantagem ao próximo teste ou ataque de um aliado, ou ajuda ele numa tarefa."},
+ {cat:"Ações em Combate", n:"Preparar", d:"Escolhe um gatilho e guarda uma ação (ou reação) para usar quando ele ocorrer."},
+ {cat:"Ações em Combate", n:"Usar um Objeto", d:"Interage com um segundo objeto no turno (o primeiro é de graça)."},
+ {cat:"Ações em Combate", n:"Procurar", d:"Faz um teste de Percepção, Investigação ou Intuição para notar algo."},
+ {cat:"Ações em Combate", n:"Lançar Magia", d:"Conjura uma magia com o tempo de conjuração indicado nela (geralmente uma ação)."},
+ {cat:"Dificuldade (CD)", n:"Muito fácil", d:"CD 5"},
+ {cat:"Dificuldade (CD)", n:"Fácil", d:"CD 10"},
+ {cat:"Dificuldade (CD)", n:"Médio", d:"CD 15"},
+ {cat:"Dificuldade (CD)", n:"Difícil", d:"CD 20"},
+ {cat:"Dificuldade (CD)", n:"Muito difícil", d:"CD 25"},
+ {cat:"Dificuldade (CD)", n:"Quase impossível", d:"CD 30"},
+ {cat:"Descanso", n:"Descanso Curto", d:"Pelo menos 1 hora de atividade leve. Pode gastar Dados de Vida para recuperar PV."},
+ {cat:"Descanso", n:"Descanso Longo", d:"Pelo menos 8 horas (até 1h de atividade leve). Recupera todos os PV, metade dos Dados de Vida (mín. 1), espaços de magia e a maioria dos recursos de classe; remove 1 nível de Exaustão."}
+];
+let libView="regras";
+function libTab(v){
+  libView=v;
+  document.getElementById("libTabRegras").classList.toggle("on",v==="regras");
+  document.getElementById("libTabPdfs").classList.toggle("on",v==="pdfs");
+  document.getElementById("libBusca").style.display=v==="regras"?"block":"none";
+  document.getElementById("pdfAddBtn").style.display=v==="pdfs"?"block":"none";
+  if(v==="regras") libRender(); else pdfRenderLista();
+}
+/* ---- PDFs pessoais (guardados no aparelho via IndexedDB) ---- */
+let pdfDb=null;
+function pdfIdb(){
+  return new Promise((resolve,reject)=>{
+    if(pdfDb) return resolve(pdfDb);
+    if(!("indexedDB" in window)) return reject("sem indexedDB");
+    const req=indexedDB.open("grimorioPdfsDB",1);
+    req.onupgradeneeded=()=>{ req.result.createObjectStore("arquivos"); };
+    req.onsuccess=()=>{ pdfDb=req.result; resolve(pdfDb); };
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function pdfGet(key){
+  try{ const db=await pdfIdb();
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction("arquivos","readonly").objectStore("arquivos").get(key);
+      tx.onsuccess=()=>res(tx.result); tx.onerror=()=>rej(tx.error);
+    });
+  }catch(e){ return null; }
+}
+async function pdfSet(key,val){
+  try{ const db=await pdfIdb();
+    await new Promise((res,rej)=>{
+      const tx=db.transaction("arquivos","readwrite").objectStore("arquivos").put(val,key);
+      tx.onsuccess=()=>res(); tx.onerror=()=>rej(tx.error);
+    });
+  }catch(e){ alert("Não consegui salvar o PDF — pode ser falta de espaço no aparelho."); }
+}
+async function pdfDel(key){
+  try{ const db=await pdfIdb();
+    await new Promise(res=>{
+      const tx=db.transaction("arquivos","readwrite").objectStore("arquivos").delete(key);
+      tx.onsuccess=()=>res(); tx.onerror=()=>res();
+    });
+  }catch(e){}
+}
+async function pdfIndice(){ return (await pdfGet("_index"))||[]; }
+async function pdfArquivoEscolhido(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  if(f.type!=="application/pdf" && !f.name.toLowerCase().endsWith(".pdf")){
+    alert("Escolha um arquivo PDF."); inp.value=""; return;
+  }
+  const id="pdf"+Date.now()+Math.random().toString(36).slice(2,5);
+  await pdfSet(id,f);
+  const idx=await pdfIndice();
+  idx.push({id, nome:f.name, ts:Date.now()});
+  await pdfSet("_index",idx);
+  inp.value="";
+  pdfRenderLista();
+}
+async function pdfAbrir(id){
+  const f=await pdfGet(id); if(!f){ alert("Não encontrei esse arquivo."); return; }
+  const url=URL.createObjectURL(f);
+  window.open(url,"_blank");
+}
+async function pdfRemover(id){
+  if(!confirm("Remover este PDF do aparelho?")) return;
+  await pdfDel(id);
+  const idx=(await pdfIndice()).filter(x=>x.id!==id);
+  await pdfSet("_index",idx);
+  pdfRenderLista();
+}
+async function pdfRenderLista(){
+  const el=document.getElementById("libLista"); if(!el) return;
+  const idx=await pdfIndice();
+  el.innerHTML="";
+  if(!idx.length){ el.innerHTML='<div class="empty" style="padding:14px 4px">Nenhum PDF adicionado ainda. Toque em "+ adicionar PDF" para escolher um arquivo do seu aparelho.</div>'; return; }
+  idx.slice().sort((a,b)=>b.ts-a.ts).forEach(it=>{
+    const d=document.createElement("div"); d.className="pdfitem";
+    d.innerHTML=`<span class="pdfic">📄</span><span class="pdfnome"></span>
+      <button class="gbtn ghost" style="padding:6px 10px">abrir</button>
+      <button class="xbtn" style="width:30px;height:30px">✕</button>`;
+    d.querySelector(".pdfnome").textContent=it.nome;
+    d.querySelector(".gbtn").onclick=()=>pdfAbrir(it.id);
+    d.querySelector(".xbtn").onclick=()=>pdfRemover(it.id);
+    el.appendChild(d);
+  });
+}
+function libRender(){
+  const q=(document.getElementById("libBusca").value||"").toLowerCase();
+  const el=document.getElementById("libLista"); el.innerHTML="";
+  const cats=[...new Set(REFLIB.map(x=>x.cat))];
+  let achou=false;
+  cats.forEach(cat=>{
+    const itens=REFLIB.filter(x=>x.cat===cat && (!q||(x.n+" "+x.d).toLowerCase().includes(q)));
+    if(!itens.length) return;
+    achou=true;
+    const h=document.createElement("div"); h.className="libcat"; h.textContent=cat; el.appendChild(h);
+    itens.forEach(it=>{
+      const d=document.createElement("div"); d.className="libitem";
+      d.innerHTML=`<b></b><div class="libd"></div>`;
+      d.querySelector("b").textContent=it.n;
+      d.querySelector(".libd").textContent=it.d;
+      el.appendChild(d);
+    });
+  });
+  if(!achou) el.innerHTML='<div class="empty" style="padding:14px 4px">Nada encontrado.</div>';
+}
+function libPosicionar(){
+  const btn=document.getElementById("libBtn"), panel=document.getElementById("libPanel");
+  const br=btn.getBoundingClientRect();
+  let x=br.left, y=br.top-8-Math.min(420,window.innerHeight*0.7);
+  if(y<10) y=br.bottom+8;
+  x=Math.max(8,Math.min(window.innerWidth-350,x));
+  panel.style.left=x+"px"; panel.style.top=y+"px";
+}
+function libAbrir(){
+  libPosicionar();
+  document.getElementById("libPanel").style.display="flex";
+  libTab(libView);
+}
+function libFechar(){
+  document.getElementById("libPanel").style.display="none";
+}
+(function libBind(){
+  function bind(){
+    const btn=document.getElementById("libBtn"), panel=document.getElementById("libPanel"), head=document.getElementById("libHead");
+    if(!btn||btn.dataset.bound) return;
+    btn.dataset.bound="1";
+    R.uiPos=R.uiPos||{};
+    if(R.uiPos.libBtn&&R.uiPos.libBtn.x!=null){
+      btn.style.left=R.uiPos.libBtn.x+"px"; btn.style.top=R.uiPos.libBtn.y+"px";
+      btn.style.right="auto"; btn.style.bottom="auto";
+    }
+    const pos=e=>{ const t=(e.touches&&e.touches[0])||e; return [t.clientX,t.clientY]; };
+    const arrastavel=(handle, aoSoltarMover, aoTocar)=>{
+      let moveu=false;
+      const down=e=>{
+        moveu=false;
+        const [sx0,sy0]=pos(e);
+        const sx=sx0-handle.parentElement.offsetLeft, sy=sy0-handle.parentElement.offsetTop;
+        const move=m=>{
+          m.preventDefault();
+          const [mx,my]=pos(m);
+          if(Math.abs(mx-sx0)+Math.abs(my-sy0)>6) moveu=true;
+          if(moveu) aoSoltarMover(Math.max(0,Math.min(window.innerWidth-50,mx-sx)), Math.max(0,Math.min(window.innerHeight-40,my-sy)));
+        };
+        const up=()=>{
+          document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
+          document.removeEventListener("touchmove",move); document.removeEventListener("touchend",up);
+          if(!moveu && aoTocar) aoTocar();
+        };
+        document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+        document.addEventListener("touchmove",move,{passive:false}); document.addEventListener("touchend",up);
+      };
+      handle.addEventListener("mousedown",down);
+      handle.addEventListener("touchstart",down,{passive:true});
+    };
+    arrastavel(btn, (x,y)=>{
+      btn.style.left=x+"px"; btn.style.top=y+"px"; btn.style.right="auto"; btn.style.bottom="auto";
+    }, ()=>{
+      R.uiPos=R.uiPos||{}; R.uiPos.libBtn={x:btn.offsetLeft,y:btn.offsetTop}; save();
+      if(panel.style.display==="none") libAbrir(); else libFechar();
+    });
+    arrastavel(head, (x,y)=>{ panel.style.left=x+"px"; panel.style.top=y+"px"; }, null);
+  }
+  if(document.readyState!=="loading") bind(); else document.addEventListener("DOMContentLoaded",bind);
+})();
+
+/* ================== reordenar quadros da Ficha ================== */
+const ORDEM_PADRAO=["identidade","atributos","combate","pericias","ataques","companheiros",
+  "caracteristicas","tracos","talentos","treinamento","magias","idiomas","moedas","equipamento"];
+const NOME_CARD={identidade:"Identidade",atributos:"Atributos",combate:"Combate",pericias:"Perícias",
+  ataques:"Ataques",companheiros:"Companheiros",caracteristicas:"Características",tracos:"Traços de Espécie",
+  talentos:"Talentos",treinamento:"Treinamento",magias:"Magias",idiomas:"Idiomas",moedas:"Moedas",equipamento:"Equipamento"};
+let reordOn=false;
+function toggleReorder(){
+  reordOn=!reordOn;
+  document.body.classList.toggle("reord",reordOn);
+  document.getElementById("reordBtn").textContent=reordOn?"✓ concluir reorganização":"↕ reorganizar quadros";
+  applyCardOrder();
+}
+function cardOrdem(){
+  const salva=(S.char.ordemCards||[]).filter(k=>ORDEM_PADRAO.includes(k));
+  const faltando=ORDEM_PADRAO.filter(k=>!salva.includes(k));
+  return [...salva,...faltando];
+}
+function moveCard(key,dir){
+  const ord=cardOrdem();
+  const i=ord.indexOf(key), j=i+dir;
+  if(j<0||j>=ord.length) return;
+  [ord[i],ord[j]]=[ord[j],ord[i]];
+  S.char.ordemCards=ord;
+  save(); applyCardOrder();
+}
+function applyCardMin(){
+  const min=new Set(S.char.cardsMin||[]);
+  ORDEM_PADRAO.forEach(key=>{
+    const el=document.querySelector(`#fichaCards [data-card="${key}"]`); if(!el) return;
+    el.classList.toggle("cardmin", min.has(key));
+    let btn=el.querySelector(".cardmin-btn");
+    if(!btn){
+      btn=document.createElement("button"); btn.className="cardmin-btn";
+      btn.onclick=(ev)=>{ ev.stopPropagation(); toggleCardMin(key); };
+      el.appendChild(btn);
+    }
+    btn.textContent=min.has(key)?"▸":"▾";
+    btn.title=min.has(key)?"expandir "+NOME_CARD[key]:"minimizar "+NOME_CARD[key];
+  });
+  const btnTodos=document.getElementById("minTodosBtn");
+  if(btnTodos) btnTodos.textContent = min.size>=ORDEM_PADRAO.length ? "▸ expandir tudo" : "▾ minimizar tudo";
+}
+function toggleCardMin(key){
+  S.char.cardsMin=S.char.cardsMin||[];
+  const i=S.char.cardsMin.indexOf(key);
+  if(i>=0) S.char.cardsMin.splice(i,1); else S.char.cardsMin.push(key);
+  save(); applyCardMin();
+}
+function toggleMinTodos(){
+  const tudoMin=(S.char.cardsMin||[]).length>=ORDEM_PADRAO.length;
+  S.char.cardsMin=tudoMin?[]:ORDEM_PADRAO.slice();
+  save(); applyCardMin();
+}
+function applyCardOrder(){
+  const cont=document.getElementById("fichaCards"); if(!cont) return;
+  const ord=cardOrdem();
+  ord.forEach(key=>{
+    const el=cont.querySelector(`[data-card="${key}"]`);
+    if(el) cont.appendChild(el);
+  });
+  // barra de mover, só visível no modo reorganizar
+  ord.forEach((key,idx)=>{
+    const el=cont.querySelector(`[data-card="${key}"]`); if(!el) return;
+    let bar=el.querySelector(".reordbar");
+    if(!bar){
+      bar=document.createElement("div"); bar.className="reordbar";
+      bar.innerHTML=`<button class="up" title="mover para cima">▲</button><button class="down" title="mover para baixo">▼</button>`;
+      bar.querySelector(".up").onclick=()=>moveCard(key,-1);
+      bar.querySelector(".down").onclick=()=>moveCard(key,1);
+      el.insertBefore(bar, el.firstChild);
+    }
+    bar.querySelector(".up").disabled=idx===0;
+    bar.querySelector(".down").disabled=idx===ord.length-1;
+  });
+  applyCardMin();
+}
+
+/* ================== mapa (visualização + marcações do jogador) ================== */
+let mapaZ=1, mapaTx=0, mapaTy=0, mapaUltimoSrc="";
+let mapaImgObj=null;                 // Image() carregada do mestre
+let mapaPlayerTool=null;             // 'pin' | 'draw' | null
+const mapaPlayerCor="#1565c0";
+let mapaDrawing=false, mapaStrokeAtual=null;
+
+function mapaGarantirAnot(src){
+  R.mapaAnotacoes=R.mapaAnotacoes||{src:"",ops:[]};
+  if(R.mapaAnotacoes.src!==src){ R.mapaAnotacoes={src, ops:[]}; save(); }
+}
+function mapaReceber(src){
+  if(src===mapaUltimoSrc) return;
+  mapaUltimoSrc=src;
+  mapaGarantirAnot(src);
+  document.getElementById("mapaEmpty").style.display="none";
+  document.getElementById("mapaViewWrap").style.display="block";
+  const im=new Image();
+  im.onload=()=>{
+    mapaImgObj=im;
+    const cv=document.getElementById("mapaCanvasEl");
+    cv.width=im.naturalWidth; cv.height=im.naturalHeight;
+    mapaRedesenhar();
+    mapaZoomReset();
+  };
+  im.src=src;
+  if(document.getElementById("mapa").classList.contains("on")) return; // já está vendo
+  setSaveState("🗺 novo mapa do mestre!",true);
+}
+function mapaDesenharOp(ctx,op,W,H){
+  if(op.type==="pin"){
+    const x=op.x*W, y=op.y*H;
+    ctx.beginPath(); ctx.arc(x,y,Math.max(8,W*0.012),0,Math.PI*2);
+    ctx.fillStyle=op.color; ctx.fill();
+    ctx.lineWidth=Math.max(2,W*0.002); ctx.strokeStyle="#fff"; ctx.stroke();
+    if(op.label){
+      ctx.font=`bold ${Math.max(14,W*0.018)}px sans-serif`;
+      ctx.fillStyle="#000"; ctx.strokeStyle="#fff"; ctx.lineWidth=Math.max(3,W*0.003);
+      ctx.textAlign="center";
+      ctx.strokeText(op.label, x, y-Math.max(12,W*0.018));
+      ctx.fillText(op.label, x, y-Math.max(12,W*0.018));
+    }
+  }else if(op.type==="stroke" && op.points && op.points.length>1){
+    ctx.beginPath();
+    ctx.moveTo(op.points[0][0]*W, op.points[0][1]*H);
+    for(let i=1;i<op.points.length;i++) ctx.lineTo(op.points[i][0]*W, op.points[i][1]*H);
+    ctx.strokeStyle=op.color; ctx.lineWidth=Math.max(3,W*0.005);
+    ctx.lineCap="round"; ctx.lineJoin="round"; ctx.stroke();
+  }
+}
+function mapaRedesenhar(){
+  const cv=document.getElementById("mapaCanvasEl"); if(!cv||!mapaImgObj) return;
+  const ctx=cv.getContext("2d");
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(mapaImgObj,0,0,cv.width,cv.height);
+  ((R.mapaAnotacoes&&R.mapaAnotacoes.ops)||[]).forEach(op=>mapaDesenharOp(ctx,op,cv.width,cv.height));
+}
+function mapaPlayerFerramenta(t){
+  mapaPlayerTool=(mapaPlayerTool===t)?null:t;
+  document.getElementById("mpPin").classList.toggle("on",mapaPlayerTool==="pin");
+  document.getElementById("mpDraw").classList.toggle("on",mapaPlayerTool==="draw");
+}
+function mapaPlayerDesfazer(){
+  if(!R.mapaAnotacoes||!R.mapaAnotacoes.ops.length) return;
+  R.mapaAnotacoes.ops.pop(); save(); mapaRedesenhar();
+}
+function mapaPlayerLimpar(){
+  if(!R.mapaAnotacoes||!R.mapaAnotacoes.ops.length) return;
+  if(!confirm("Apagar todas as suas marcações neste mapa?")) return;
+  R.mapaAnotacoes.ops=[]; save(); mapaRedesenhar();
+}
+function mapaAplicarTransform(){
+  const cv=document.getElementById("mapaCanvasEl"); if(!cv) return;
+  cv.style.transform=`translate(${mapaTx}px,${mapaTy}px) scale(${mapaZ})`;
+}
+function mapaClamp(){
+  const stage=document.getElementById("mapaStage"), cv=document.getElementById("mapaCanvasEl");
+  if(!stage||!cv||!cv.width) return;
+  const w=cv.width*mapaZ, h=cv.height*mapaZ;
+  const sw=stage.clientWidth, sh=stage.clientHeight;
+  const minX=Math.min(0,sw-w), minY=Math.min(0,sh-h);
+  mapaTx=Math.min(0,Math.max(minX,mapaTx));
+  mapaTy=Math.min(0,Math.max(minY,mapaTy));
+}
+function mapaZoom(delta){
+  mapaZ=Math.min(4,Math.max(0.5,mapaZ+delta));
+  mapaClamp(); mapaAplicarTransform();
+}
+function mapaZoomReset(){
+  const stage=document.getElementById("mapaStage"), cv=document.getElementById("mapaCanvasEl");
+  if(!stage||!cv||!cv.width){ mapaZ=1; mapaTx=0; mapaTy=0; return; }
+  mapaZ=Math.min(1, stage.clientWidth/cv.width);
+  mapaTx=(stage.clientWidth-cv.width*mapaZ)/2;
+  mapaTy=0;
+  mapaAplicarTransform();
+}
+(function mapaBindInteracao(){
+  let arrastando=false, ultX=0, ultY=0;
+  let pinchDist=0;
+  const pos=e=>{
+    if(e.touches&&e.touches.length===1) return [e.touches[0].clientX,e.touches[0].clientY];
+    return [e.clientX,e.clientY];
+  };
+  const distTouches=t=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+  const relPos=(e)=>{
+    const cv=document.getElementById("mapaCanvasEl");
+    const r=cv.getBoundingClientRect();
+    const [px,py]=pos(e);
+    return [ Math.min(1,Math.max(0,(px-r.left)/r.width)), Math.min(1,Math.max(0,(py-r.top)/r.height)) ];
+  };
+  document.addEventListener("DOMContentLoaded",bind);
+  function bind(){
+    const stage=document.getElementById("mapaStage"); if(!stage) return;
+    const down=e=>{
+      if(e.touches&&e.touches.length===2){ pinchDist=distTouches(e.touches); return; }
+      if(mapaPlayerTool==="pin"){
+        e.preventDefault();
+        const [x,y]=relPos(e);
+        const label=(prompt("Rótulo do seu marcador (opcional):")||"").slice(0,30);
+        R.mapaAnotacoes=R.mapaAnotacoes||{src:mapaUltimoSrc,ops:[]};
+        R.mapaAnotacoes.ops.push({type:"pin", x, y, color:mapaPlayerCor, label});
+        save(); mapaRedesenhar();
+        return;
+      }
+      if(mapaPlayerTool==="draw"){
+        e.preventDefault();
+        mapaDrawing=true;
+        const [x,y]=relPos(e);
+        mapaStrokeAtual={type:"stroke", color:mapaPlayerCor, points:[[x,y]]};
+        return;
+      }
+      arrastando=true; [ultX,ultY]=pos(e);
+    };
+    const move=e=>{
+      if(e.touches&&e.touches.length===2){
+        e.preventDefault();
+        const d=distTouches(e.touches);
+        if(pinchDist){ mapaZoom((d-pinchDist)*0.006); }
+        pinchDist=d; return;
+      }
+      if(mapaPlayerTool==="draw"&&mapaDrawing){
+        e.preventDefault();
+        const [x,y]=relPos(e);
+        mapaStrokeAtual.points.push([x,y]);
+        mapaRedesenhar();
+        const ctx=document.getElementById("mapaCanvasEl").getContext("2d");
+        mapaDesenharOp(ctx,mapaStrokeAtual,document.getElementById("mapaCanvasEl").width,document.getElementById("mapaCanvasEl").height);
+        return;
+      }
+      if(mapaPlayerTool) return;   // ferramenta 'pin' não usa move
+      if(!arrastando) return; e.preventDefault();
+      const [x,y]=pos(e);
+      mapaTx+=x-ultX; mapaTy+=y-ultY; ultX=x; ultY=y;
+      mapaClamp(); mapaAplicarTransform();
+    };
+    const up=()=>{
+      if(mapaPlayerTool==="draw"&&mapaDrawing){
+        mapaDrawing=false;
+        if(mapaStrokeAtual&&mapaStrokeAtual.points.length>1){
+          R.mapaAnotacoes=R.mapaAnotacoes||{src:mapaUltimoSrc,ops:[]};
+          R.mapaAnotacoes.ops.push(mapaStrokeAtual); save();
+        }
+        mapaStrokeAtual=null; mapaRedesenhar();
+      }
+      arrastando=false; pinchDist=0;
+    };
+    stage.addEventListener("mousedown",down); stage.addEventListener("mousemove",move); window.addEventListener("mouseup",up);
+    stage.addEventListener("touchstart",down,{passive:false}); stage.addEventListener("touchmove",move,{passive:false}); stage.addEventListener("touchend",up);
+    stage.addEventListener("wheel",e=>{ e.preventDefault(); mapaZoom(e.deltaY<0?0.15:-0.15); },{passive:false});
+  }
+  if(document.readyState!=="loading") bind();
+})();
+
+/* ================== avisos de chat (pop-up) ================== */
+function mostrarToast(m){
+  const layer=document.getElementById("toastLayer"); if(!layer) return;
+  const priv=m.para&&m.para!==""?"🔒 ":"✉ ";
+  const el=document.createElement("div"); el.className="toast";
+  el.innerHTML=`<span class="ic">${priv}</span><div class="tt"><b></b><br></div>`;
+  el.querySelector("b").textContent=m.de||"?";
+  el.querySelector(".tt").appendChild(document.createTextNode(m.texto||""));
+  const sair=()=>{ if(!el.parentNode) return; el.classList.add("out"); setTimeout(()=>el.remove(),260); };
+  el.onclick=()=>{ sair(); showTab("mesa"); };
+  layer.appendChild(el);
+  setTimeout(sair,5000);
+}
+
+/* ================== presença e chat da mesa ================== */
+let fbPres=[], fbChat=[], fbChatLast=0;
+function chatParaOpcoes(){
+  const sel=document.getElementById("chatPara"); if(!sel) return;
+  const atual=sel.value;
+  sel.innerHTML='<option value="">para todos</option><option value="mestre">🔒 só o mestre</option>';
+  fbPres.filter(p=>p.id!==S.id).forEach(p=>{
+    const o=document.createElement("option");
+    o.value=p.id;
+    o.textContent="🔒 "+(p.jog||p.nome);
+    sel.appendChild(o);
+  });
+  if([...sel.options].some(o=>o.value===atual)) sel.value=atual;
+}
+function renderPresenca(){
+  const el=document.getElementById("fbPresenca"); if(!el) return;
+  if(!fbOk||!fbPres.length){
+    el.innerHTML='<div class="empty">'+(fbOk?"ninguém na sala ainda":"conecte-se à sala do mestre (aba Heróis → Mesa Online)")+'</div>';
+    return;
+  }
+  el.innerHTML="";
+  fbPres.forEach(p=>{
+    const c=document.createElement("div"); c.className="preschip";
+    c.innerHTML=`⚔ <b></b>${p.jog?' <span class="pj"></span>':""}`;
+    c.querySelector("b").textContent=p.nome;
+    if(p.jog) c.querySelector(".pj").textContent="("+p.jog+")";
+    el.appendChild(c);
+  });
+}
+function chatVisivel(m){
+  return m.para==="" || m.para===S.id || m.deId===S.id;
+}
+function renderChat(){
+  const el=document.getElementById("chatMsgs"); if(!el) return;
+  const list=fbChat.filter(chatVisivel);
+  if(!list.length){
+    el.innerHTML='<div class="empty">'+(fbOk?"nenhuma mensagem ainda":"conecte-se à sala para conversar com a mesa")+'</div>';
+    return;
+  }
+  el.innerHTML="";
+  list.forEach(m=>{
+    const d=document.createElement("div");
+    d.className="cmsg"+(m.deId===S.id?" eu":"");
+    const hora=new Date(m.ts||0).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+    const priv=m.para===""?"":(m.para==="mestre"?"🔒 só o mestre":"🔒 para você");
+    d.innerHTML=`<div class="who"><b></b>${priv?`<span class="priv">${priv}</span>`:""}<span style="margin-left:auto">${hora}</span></div><div class="tx"></div>`;
+    d.querySelector("b").textContent=m.de||"?";
+    d.querySelector(".tx").textContent=m.texto;
+    el.appendChild(d);
+  });
+  el.scrollTop=el.scrollHeight;
+}
+function fbEnviarChat(){
+  const inp=document.getElementById("chatTxt");
+  const txt=(inp.value||"").trim();
+  if(!txt) return;
+  if(!fbOk||!fbDb||!S.sync||!S.sync.on||!S.sync.sala){
+    setSaveState("conecte-se à sala primeiro (aba Heróis → Mesa Online)"); return;
+  }
+  const de=(S.char.jogador?S.char.jogador+" ":"")+"("+(S.char.nome||"herói")+")";
+  try{
+    fbDb.collection("salas").doc(S.sync.sala).collection("chat").add({
+      de, deId:S.id, para:document.getElementById("chatPara").value||"",
+      texto:txt.slice(0,500), ts:Date.now()
+    });
+    inp.value="";
+  }catch(e){ setSaveState("falha ao enviar — tente de novo"); }
+}
+(function(){ // enviar com Enter
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Enter" && document.activeElement && document.activeElement.id==="chatTxt") fbEnviarChat();
+  });
+})();
+
+/* ================== biblioteca de talentos (resumos 2024) ================== */
+const TALENTOS=[
+ // Origem (nível 1)
+ {n:"Alerta",o:1,d:"Some seu bônus de proficiência à iniciativa; após rolar, pode trocar sua iniciativa com um aliado voluntário."},
+ {n:"Artesão",o:1,d:"Proficiência com 3 ferramentas de artesão, desconto ao comprar equipamento e fabricação mais rápida em descansos."},
+ {n:"Atacante Selvagem",o:1,d:"1×/turno, ao acertar com arma ou golpe desarmado, rerrole os dados de dano e use o maior resultado."},
+ {n:"Combatente de Taverna",o:1,d:"Golpe desarmado causa 1d4+FOR; rerrola 1s no dano; pode empurrar 1,5m ao acertar; proficiência com armas improvisadas."},
+ {n:"Curandeiro",o:1,d:"Com um kit de curandeiro: faz o alvo gastar um Dado de Vida e curar; rerrola 1s em qualquer dado de cura que você rolar."},
+ {n:"Habilidoso",o:1,d:"Proficiência em 3 perícias ou ferramentas à sua escolha (repetível)."},
+ {n:"Iniciado em Magia",o:1,d:"Aprende 2 truques e 1 magia de 1º círculo (lista de Clérigo, Druida ou Mago); conjura a de 1º 1×/descanso longo sem gastar espaço."},
+ {n:"Músico",o:1,d:"Proficiência com 3 instrumentos; ao fim de descansos, toca e concede Inspiração Heroica a aliados (até seu bônus de prof.)."},
+ {n:"Robusto",o:1,d:"+2 PV máximos por nível (agora e a cada nível futuro)."},
+ {n:"Sortudo",o:1,d:"Pontos de Sorte = bônus de prof. por descanso longo: vantagem num d20 seu ou desvantagem num ataque contra você."},
+ // Gerais (nível 4+, incluem +1 num atributo)
+ {n:"Aumento no Valor de Atributo",o:0,d:"+2 em um atributo ou +1 em dois (máx. 20)."},
+ {n:"Adepto Elemental",o:0,d:"+1 INT/SAB/CAR. Escolha um elemento: suas magias ignoram resistência a ele e 1s nos dados de dano viram 2s."},
+ {n:"Agarrador",o:0,d:"+1 FOR/DES. Vantagem em ataques contra criaturas agarradas por você; pode agarrar junto com o golpe desarmado; mover o agarrado sem custo extra."},
+ {n:"Atirador de Elite",o:0,d:"+1 DES. Atirar sem desvantagem: no alcance longo, em combate corpo a corpo, e ignorando cobertura parcial e três-quartos."},
+ {n:"Atleta",o:0,d:"+1 FOR/DES. Escalada sem custo extra; levanta-se gastando só 1,5m; salto com corrida após 1,5m."},
+ {n:"Chef",o:0,d:"+1 CON/SAB. Comida em descanso curto cura extra; petiscos dão PV temporários (bônus de prof. de usos)."},
+ {n:"Conjurador de Guerra",o:0,d:"+1 INT/SAB/CAR. Vantagem em salvaguardas de concentração; componentes somáticos com mãos ocupadas; conjura truque/magia como ataque de oportunidade."},
+ {n:"Duelista Defensivo",o:0,d:"+1 DES. Reação com arma de acuidade em mãos: soma o bônus de prof. à CA contra o ataque (até seu próximo turno, regra 2024)."},
+ {n:"Inspirador",o:0,d:"+1 SAB/CAR. Discurso de 10 min: até 6 criaturas ganham PV temporários = seu nível + mod. do atributo."},
+ {n:"Lutador com Duas Armas",o:0,d:"+1 FOR/DES. Ao atacar com arma leve, ataque extra com outra arma na mão livre como ação bônus (uma vez por turno)."},
+ {n:"Matador de Magos",o:0,d:"+1 FOR/DES. Vantagem em salvaguardas contra magias de criaturas a 1,5m; quando o alvo conjurar perto de você, pode reagir atacando."},
+ {n:"Mestre em Armas de Haste",o:0,d:"+1 FOR/DES. Ataque bônus com a outra ponta da haste (1d4); ataque de oportunidade quando entram no seu alcance."},
+ {n:"Mestre em Armas Grandes",o:0,d:"+1 FOR. Com armas pesadas: pode somar seu bônus de prof. ao dano no lugar de precisão (regra 2024); ataque bônus ao reduzir inimigo a 0 PV ou acertar crítico."},
+ {n:"Mestre Escudeiro",o:0,d:"+1 FOR. Após acertar ataque, empurra com o escudo (derruba ou afasta); em salv. de DES contra área, sucesso = dano zero usando o escudo."},
+ {n:"Observador",o:0,d:"+1 INT/SAB. Bônus em Percepção e Investigação; usa Procurar como ação bônus (regra 2024)."},
+ {n:"Resiliente",o:0,d:"+1 no atributo escolhido e proficiência nas salvaguardas dele."},
+ {n:"Sentinela",o:0,d:"+1 FOR/DES. Oportunidade mesmo contra Desengajar; acertar zera o deslocamento do alvo; reação para atacar quem golpeia seus aliados."},
+ {n:"Telecinético",o:0,d:"+1 INT/SAB/CAR. Mãos Mágicas invisível sem componentes; ação bônus: empurra/puxa criatura 1,5m (salv. FOR)."},
+ {n:"Telepata",o:0,d:"+1 INT/SAB/CAR. Fala telepaticamente com criaturas a até 18m (elas respondem se quiserem e compartilharem idioma)."},
+ {n:"Veloz",o:0,d:"+1 DES/CON. +3m de deslocamento; Disparada ignora terreno difícil; ataques de oportunidade contra você têm desvantagem quando você Dispara."}
+];
+let talAberta=false;
+function toggleTal(){
+  talAberta=!talAberta;
+  document.getElementById("talPanel").style.display=talAberta?"block":"none";
+  if(talAberta) renderTal();
+}
+function renderTal(){
+  const q=(document.getElementById("talBusca").value||"").toLowerCase();
+  const el=document.getElementById("talList"); el.innerHTML="";
+  const list=TALENTOS.filter(t=>!q||(t.n+" "+t.d).toLowerCase().includes(q));
+  if(!list.length){ el.innerHTML='<div class="empty" style="padding:12px">Nenhum talento encontrado.</div>'; return; }
+  list.forEach(t=>{
+    const d=document.createElement("div");
+    d.style.cssText="border-bottom:1px dotted var(--parch-line); padding:6px 0";
+    d.innerHTML=`<div style="display:flex; align-items:center; gap:8px">
+        <span style="flex:1; font-weight:600">${t.n} <span style="font-weight:400; font-size:.68rem; color:var(--ink-soft)">${t.o?"Origem":"Geral"}</span></span>
+        <button class="gbtn" style="padding:3px 12px" title="adicionar">+</button>
+      </div>
+      <div style="font-size:.82rem; color:var(--ink-soft); line-height:1.35; margin-top:3px">${t.d}</div>`;
+    d.querySelector(".gbtn").onclick=()=>{
+      const atual=S.char.talentos||"";
+      if(atual.toLowerCase().includes(t.n.toLowerCase())){
+        setSaveState(`"${t.n}" já está nos seus talentos`); return;
+      }
+      S.char.talentos=(atual?atual+"\n":"")+"• "+t.n+" — "+t.d;
+      const ta=document.getElementById("c_talentos"); if(ta) ta.value=S.char.talentos;
+      save(); setSaveState(`✦ ${t.n} adicionado aos talentos`,true);
+    };
+    el.appendChild(d);
+  });
+}
+
+/* ================== biblioteca de magias (SRD 5.2, CC-BY-4.0) ================== */
+const BIBLIO=[
+ // ---- truques ----
+ {n:"Chama Sagrada",c:0,cl:"clérigo",d:"Ação • 18m • Instantânea. Radiância desce sobre o alvo: 1d8 radiante, salvaguarda de DES anula. Não recebe benefício de cobertura. Escala: +1d8 nos níveis 5/11/17."},
+ {n:"Globos de Luz",c:0,cl:"bardo feiticeiro mago",d:"Ação • 36m • Conc. 1 min. Até 4 luzes flutuantes (penumbra 3m) que você move com ação bônus."},
+ {n:"Ilusão Menor",c:0,cl:"bardo bruxo feiticeiro mago",d:"Ação • 9m • 1 min. Cria um som ou uma imagem estática (cubo de 1,5m). Investigação contra sua CD revela."},
+ {n:"Luz",c:0,cl:"bardo clérigo feiticeiro mago",d:"Ação • Toque • 1 hora. Objeto brilha: luz plena 6m + penumbra 6m."},
+ {n:"Mãos Mágicas",c:0,cl:"bardo bruxo feiticeiro mago",d:"Ação • 9m • 1 min. Mão espectral manipula objetos leves (até ~5kg) à distância."},
+ {n:"Orientação",c:0,cl:"clérigo druida",d:"Ação • Toque • Conc. 1 min. O alvo soma 1d4 a um teste de atributo à sua escolha antes do fim."},
+ {n:"Prestidigitação",c:0,cl:"bardo bruxo feiticeiro mago",d:"Ação • 3m • 1 hora. Pequenos truques: acender velas, limpar, esfriar, marcar, criar bugigangas."},
+ {n:"Taumaturgia",c:0,cl:"clérigo",d:"Ação • 9m • 1 min. Efeitos menores dramáticos: voz trovejante, chamas tremulando, portas batendo."},
+ {n:"Raio de Fogo",c:0,cl:"feiticeiro mago",d:"Ação • 36m • Instantânea. Ataque de magia à distância: 1d10 de fogo; incendeia objetos. Escala: +1d10 nos níveis 5/11/17."},
+ {n:"Raio de Gelo",c:0,cl:"feiticeiro mago",d:"Ação • 18m • Instantânea. Ataque à distância: 1d8 de frio e o alvo perde 3m de deslocamento. Escala nos níveis 5/11/17."},
+ {n:"Rajada Mística",c:0,cl:"bruxo",d:"Ação • 36m • Instantânea. Ataque à distância: 1d10 de energia. Escala: raios extras nos níveis 5/11/17 (alvos iguais ou diferentes)."},
+ {n:"Resistência",c:0,cl:"clérigo druida",d:"Ação • Toque • Conc. 1 min. O alvo soma 1d4 a uma salvaguarda à sua escolha antes do fim."},
+ {n:"Zombaria Cruel",c:0,cl:"bardo",d:"Ação • 18m • Instantânea. Insulto mágico: 1d6 psíquico, salvaguarda de SAB anula; alvo tem desvantagem no próximo ataque. Escala nos níveis 5/11/17."},
+ {n:"Toque Chocante",c:0,cl:"feiticeiro mago",d:"Ação • Toque • Instantânea. Ataque corpo a corpo: 1d8 elétrico e o alvo não pode usar reações até o próximo turno dele. Escala nos níveis 5/11/17."},
+ {n:"Rajada de Veneno",c:0,cl:"druida bruxo feiticeiro mago",d:"Ação • 9m • Instantânea. Ataque à distância: 1d12 de veneno. Escala nos níveis 5/11/17."},
+ // ---- 1º círculo ----
+ {n:"Mísseis Mágicos",c:1,cl:"feiticeiro mago",d:"Ação • 36m • Instantânea. 3 dardos que acertam automaticamente: 1d4+1 de energia cada, alvos à escolha. +1 dardo por círculo acima."},
+ {n:"Curar Ferimentos",c:1,cl:"bardo clérigo druida guardião paladino",d:"Ação • Toque • Instantânea. Cura 2d8 + mod. de conjuração. +2d8 por círculo acima."},
+ {n:"Palavra de Cura",c:1,cl:"bardo clérigo druida",d:"Ação bônus • 18m • Instantânea. Cura 2d4 + mod. à distância. +2d4 por círculo acima."},
+ {n:"Escudo",c:1,cl:"feiticeiro mago",d:"Reação (ao ser atingido) • Você • 1 rodada. +5 de CA contra o gatilho e até seu próximo turno; imune a Mísseis Mágicos."},
+ {n:"Armadura Arcana",c:1,cl:"feiticeiro mago",d:"Ação • Toque • 8 horas. Alvo sem armadura fica com CA 13 + mod. DES."},
+ {n:"Bênção",c:1,cl:"clérigo paladino",d:"Ação • 9m • Conc. 1 min. Até 3 criaturas somam 1d4 em ataques e salvaguardas. +1 alvo por círculo acima."},
+ {n:"Perdição",c:1,cl:"bardo clérigo",d:"Ação • 9m • Conc. 1 min. Até 3 criaturas (salv. CAR) subtraem 1d4 de ataques e salvaguardas."},
+ {n:"Mãos Flamejantes",c:1,cl:"feiticeiro mago",d:"Ação • Cone de 4,5m • Instantânea. 3d6 de fogo, salvaguarda de DES para metade. +1d6 por círculo acima."},
+ {n:"Onda Trovejante",c:1,cl:"bardo druida feiticeiro mago",d:"Ação • Cubo de 4,5m • Instantânea. 2d8 de trovão, salvaguarda de CON para metade; quem falha é empurrado 3m. +1d8 por círculo."},
+ {n:"Raio Guiador",c:1,cl:"clérigo",d:"Ação • 36m • Instantânea. Ataque à distância: 4d6 radiante e o próximo ataque contra o alvo tem vantagem. +1d6 por círculo."},
+ {n:"Sono",c:1,cl:"bardo feiticeiro mago",d:"Ação • 18m • 1 min. Regra 2024: criaturas na área fazem salvaguarda de SAB ou ficam Incapacitadas; se continuarem, caem Inconscientes. Refazem a salvaguarda no fim dos turnos."},
+ {n:"Detectar Magia",c:1,cl:"bardo clérigo druida guardião paladino feiticeiro mago",d:"Ação (ritual) • Você • Conc. 10 min. Sente magia num raio de 9m e vê auras/escolas."},
+ {n:"Comando",c:1,cl:"clérigo paladino",d:"Ação • 18m • 1 rodada. Uma palavra de ordem (largue, fuja, prostre-se...): salvaguarda de SAB ou obedece. +1 alvo por círculo."},
+ {n:"Fogo das Fadas",c:1,cl:"druida",d:"Ação • 18m (cubo 6m) • Conc. 1 min. Salv. de DES ou a criatura fica delineada: ataques contra ela têm vantagem e ela não se beneficia de invisibilidade."},
+ {n:"Disfarçar-se",c:1,cl:"bardo feiticeiro mago",d:"Ação • Você • 1 hora. Ilusão muda sua aparência (mesma silhueta básica). Investigação contra sua CD revela."},
+ {n:"Marca do Caçador",c:1,cl:"guardião",d:"Ação bônus • 27m • Conc. 1 hora. Marca um alvo: +1d6 de dano nos seus ataques contra ele; pode transferir quando ele cair."},
+ {n:"Vitalidade Falsa",c:1,cl:"feiticeiro mago",d:"Ação • Você • Instantânea (2024). Ganha 2d4+4 PV temporários."},
+ {n:"Identificar",c:1,cl:"bardo mago",d:"Ação (ritual) • Toque • Instantânea. Revela propriedades, funcionamento e sintonia de um item mágico."},
+ // ---- 2º círculo ----
+ {n:"Passo Nebuloso",c:2,cl:"bardo bruxo druida feiticeiro mago",d:"Ação bônus • Você • Instantânea. Teleporta-se até 9m para um lugar que veja."},
+ {n:"Invisibilidade",c:2,cl:"bardo bruxo feiticeiro mago",d:"Ação • Toque • Conc. 1 hora. Alvo fica Invisível até atacar ou conjurar. +1 alvo por círculo acima."},
+ {n:"Teia",c:2,cl:"feiticeiro mago",d:"Ação • 18m (cubo 6m) • Conc. 1 hora. Teias grudentas: salvaguarda de DES ou Impedido; escapa com teste de FOR. Fogo queima 2d4."},
+ {n:"Raio Ardente",c:2,cl:"feiticeiro mago",d:"Ação • 36m • Instantânea. 3 raios, ataque cada: 2d6 de fogo por raio. +1 raio por círculo acima."},
+ {n:"Escuridão",c:2,cl:"bruxo feiticeiro mago",d:"Ação • 18m • Conc. 10 min. Esfera de 4,5m de escuridão mágica que nem visão no escuro atravessa."},
+ {n:"Silêncio",c:2,cl:"bardo clérigo guardião",d:"Ação (ritual) • 36m • Conc. 10 min. Esfera de 6m sem som: imune a trovão, magias com componente verbal falham."},
+ {n:"Ajuda",c:2,cl:"clérigo paladino bardo",d:"Ação • 9m • 8 horas. Até 3 criaturas ganham +5 nos PV máximos e atuais. +5 por círculo acima."},
+ {n:"Restauração Menor",c:2,cl:"bardo clérigo druida guardião paladino",d:"Ação • Toque • Instantânea. Encerra uma condição do alvo: Cego, Surdo, Envenenado ou Paralisado."},
+ {n:"Imagem Espelhada",c:2,cl:"bardo bruxo feiticeiro mago",d:"Ação • Você • 1 min. 3 duplicatas ilusórias; ataques podem acertá-las em vez de você (d6 por duplicata)."},
+ {n:"Arma Espiritual",c:2,cl:"clérigo",d:"Ação bônus • 18m • Conc. 1 min (2024 passou a exigir concentração). Arma flutuante: ataque de magia, 1d8 + mod. de energia; move e ataca com bônus. +1d8 a cada 2 círculos."},
+ {n:"Aprimorar Atributo",c:2,cl:"bardo clérigo druida feiticeiro",d:"Ação • Toque • Conc. 1 hora. Alvo ganha vantagem em testes de um atributo escolhido."},
+ {n:"Sugestão",c:2,cl:"bardo bruxo feiticeiro mago",d:"Ação • 9m • Conc. 8 horas. Ordem razoável de até poucas frases: salvaguarda de SAB ou o alvo segue a sugestão."},
+ // ---- 3º círculo ----
+ {n:"Bola de Fogo",c:3,cl:"feiticeiro mago",d:"Ação • 45m • Instantânea. Explosão de 6m de raio: 8d6 de fogo, salvaguarda de DES para metade. +1d6 por círculo acima."},
+ {n:"Relâmpago",c:3,cl:"feiticeiro mago",d:"Ação • Linha de 30m • Instantânea. 8d6 elétrico na linha, salvaguarda de DES para metade. +1d6 por círculo."},
+ {n:"Contramágica",c:3,cl:"bruxo feiticeiro mago",d:"Reação • 18m • Instantânea. Regra 2024: o conjurador alvo faz salvaguarda de CON; se falhar, a magia dele falha."},
+ {n:"Dissipar Magia",c:3,cl:"bardo clérigo druida bruxo paladino feiticeiro mago",d:"Ação • 36m • Instantânea. Encerra magias de 3º círculo ou menos no alvo; acima disso, teste do seu atributo de conjuração CD 10 + círculo."},
+ {n:"Voo",c:3,cl:"feiticeiro mago bruxo",d:"Ação • Toque • Conc. 10 min. Deslocamento de voo 18m. +1 alvo por círculo acima."},
+ {n:"Velocidade",c:3,cl:"feiticeiro mago",d:"Ação • 9m • Conc. 1 min. Alvo: dobro do deslocamento, +2 CA, vantagem em salv. DES e 1 ação extra limitada por turno. Ao acabar, 1 turno sem agir."},
+ {n:"Guardiões Espirituais",c:3,cl:"clérigo",d:"Ação • Você (raio 4,5m) • Conc. 10 min. Espíritos: inimigos na área têm deslocamento reduzido e sofrem 3d8 radiante/necrótico (salv. SAB metade). +1d8 por círculo."},
+ {n:"Revivificar",c:3,cl:"clérigo druida paladino guardião",d:"Ação • Toque • Instantânea. Criatura morta há menos de 1 minuto volta com 1 PV (componente: diamantes de 300 PO)."},
+ {n:"Proteção contra Energia",c:3,cl:"clérigo druida guardião feiticeiro mago",d:"Ação • Toque • Conc. 1 hora. Resistência a um tipo: ácido, frio, fogo, elétrico ou trovão."},
+ {n:"Lentidão",c:3,cl:"feiticeiro mago",d:"Ação • 36m • Conc. 1 min. Até 6 criaturas (salv. SAB): metade do deslocamento, −2 CA e DES, sem reações, ação OU bônus (não ambas)."},
+ // ---- 4º círculo ----
+ {n:"Porta Dimensional",c:4,cl:"bardo bruxo feiticeiro mago",d:"Ação • 150m • Instantânea. Teleporta você (e 1 criatura voluntária adjacente) para um ponto que veja, visualize ou descreva."},
+ {n:"Banimento",c:4,cl:"clérigo bruxo paladino feiticeiro mago",d:"Ação • 9m • Conc. 1 min. Salvaguarda de CAR ou o alvo é banido a outro plano; se for de outro plano e a concentração durar 1 min, não volta."},
+ {n:"Polimorfia",c:4,cl:"bardo druida feiticeiro mago",d:"Ação • 18m • Conc. 1 hora. Transforma o alvo (salv. SAB) numa Besta de ND até o nível/ND dele; usa as estatísticas da forma."},
+ {n:"Invisibilidade Maior",c:4,cl:"bardo feiticeiro mago",d:"Ação • Toque • Conc. 1 min. Invisível mesmo atacando ou conjurando."},
+ {n:"Escudo de Fogo",c:4,cl:"druida feiticeiro mago",d:"Ação • Você • 10 min. Escolha: resistência a frio ou fogo; quem te acerta corpo a corpo sofre 2d8 do tipo oposto."},
+ // ---- 5º círculo ----
+ {n:"Cone de Frio",c:5,cl:"druida feiticeiro mago",d:"Ação • Cone de 18m • Instantânea. 8d8 de frio, salvaguarda de CON para metade. +1d8 por círculo acima."},
+ {n:"Restauração Maior",c:5,cl:"bardo clérigo druida paladino guardião",d:"Ação • Toque • Instantânea. Reduz 1 nível de Exaustão ou encerra: encantamento, petrificação, maldição ou redução de PV máximo (100 PO de pó de diamante)."},
+ {n:"Reviver os Mortos",c:5,cl:"bardo clérigo paladino",d:"Ação • Toque • Instantânea. Criatura morta há até 10 dias volta à vida com penalidades temporárias (diamante de 500 PO)."},
+ {n:"Telecinese",c:5,cl:"feiticeiro mago",d:"Ação • 18m • Conc. 10 min. Move criaturas (disputa com FOR) ou objetos de até ~450kg com a mente, a cada turno."},
+ {n:"Muro de Pedra",c:5,cl:"druida feiticeiro mago",d:"Ação • 36m • Conc. 10 min. Muro de pedra em painéis de 3×3m; vira permanente se concentrar até o fim."},
+ // ---- 6º círculo ----
+ {n:"Desintegrar",c:6,cl:"feiticeiro mago",d:"Ação • 18m • Instantânea. Salvaguarda de DES ou 10d6+40 de energia; quem cai a 0 PV vira pó. +3d6 por círculo."},
+ {n:"Corrente de Relâmpagos",c:6,cl:"feiticeiro mago",d:"Ação • 45m • Instantânea. 10d8 elétrico no alvo e salta para até 3 criaturas próximas (salv. DES metade). +1 salto por círculo."},
+ {n:"Cura",c:6,cl:"clérigo druida",d:"Ação • 18m • Instantânea. Restaura 70 PV e encerra cegueira, surdez e doenças. +10 PV por círculo acima."},
+ // ---- 7º e além ----
+ {n:"Teletransporte",c:7,cl:"bardo feiticeiro mago",d:"Ação • Você + 8 criaturas • Instantânea. Viagem instantânea a um destino no mesmo plano; precisão depende da familiaridade (tabela)."},
+ {n:"Dedo da Morte",c:7,cl:"bruxo feiticeiro mago",d:"Ação • 18m • Instantânea. 7d8+30 necrótico, salvaguarda de CON para metade; humanoide morto por ela vira zumbi seu."},
+ {n:"Ressurreição",c:7,cl:"bardo clérigo",d:"Ação • Toque • Instantânea. Criatura morta há até 100 anos volta com todos os PV (diamante de 1.000 PO)."},
+ {n:"Palavra de Poder: Matar",c:9,cl:"bardo bruxo feiticeiro mago",d:"Ação • 18m • Instantânea. Uma criatura com 100 PV ou menos morre. Sem salvaguarda."},
+ {n:"Parar o Tempo",c:9,cl:"feiticeiro mago",d:"Ação • Você • Instantânea. 1d4+1 turnos seguidos só para você; acaba se afetar outra criatura."},
+ {n:"Chuva de Meteoros",c:9,cl:"feiticeiro mago",d:"Ação • 1,6km • Instantânea. 4 esferas de 12m: 20d6 de fogo + 20d6 de concussão, salvaguarda de DES para metade."},
+ {n:"Desejo",c:9,cl:"feiticeiro mago",d:"Ação • Você • Instantânea. Duplica qualquer magia de 8º círculo ou menos sem requisitos — ou efeitos maiores, com risco de nunca mais conjurá-la."}
+];
+let bibAberta=false;
+function toggleBiblio(){
+  bibAberta=!bibAberta;
+  document.getElementById("biblioPanel").style.display=bibAberta?"block":"none";
+  if(bibAberta) renderBiblio();
+}
+let bibOpen=null;
+function renderBiblio(){
+  const q=(document.getElementById("bibBusca").value||"").toLowerCase();
+  const fc=document.getElementById("bibCirc").value;
+  const fcl=document.getElementById("bibClasse").value;
+  const el=document.getElementById("biblioList"); el.innerHTML="";
+  const list=BIBLIO.filter(sp=>
+    (!q || (sp.n+" "+sp.d).toLowerCase().includes(q)) &&
+    (fc==="" || sp.c===Number(fc)) &&
+    (fcl==="" || sp.cl.includes(fcl)));
+  if(!list.length){ el.innerHTML='<div class="empty" style="padding:12px">Nenhuma magia encontrada.</div>'; return; }
+  list.forEach(sp=>{
+    const open=bibOpen===sp.n;
+    const d=document.createElement("div");
+    d.style.cssText="border-bottom:1px dotted var(--parch-line); padding:6px 0";
+    d.innerHTML=`<div style="display:flex; align-items:center; gap:8px">
+        <span style="flex:1; font-weight:600; cursor:pointer">${sp.n}</span>
+        <span class="cbadge">${CIRC(sp.c)}</span>
+        <button class="chev${open?" open":""}" aria-label="detalhes">▸</button>
+        <button class="gbtn" style="padding:3px 12px" title="adicionar às minhas magias">+</button>
+      </div>
+      ${open?`<div style="font-size:.85rem; color:var(--ink-soft); margin-top:5px; line-height:1.4">${sp.d}<br><i style="font-size:.75rem">Classes: ${sp.cl}</i></div>`:""}`;
+    const abrir=()=>{ bibOpen=open?null:sp.n; renderBiblio(); };
+    d.querySelector("span").onclick=abrir;
+    d.querySelector(".chev").onclick=abrir;
+    d.querySelector(".gbtn").onclick=()=>{
+      if(S.char.spells.some(x=>(x.n||"").toLowerCase()===sp.n.toLowerCase())){
+        setSaveState(`"${sp.n}" já está na sua lista`); return;
+      }
+      S.char.spells.push({id:"sp"+Date.now(), n:sp.n, c:sp.c, p:false, d:sp.d});
+      renderSpells(); save();
+      setSaveState(`✦ ${sp.n} adicionada às suas magias`,true);
+    };
+    el.appendChild(d);
+  });
+}
+
+/* ================== galeria de heróis ================== */
+function renderRoster(){
+  const el=document.getElementById("rosterList"); el.innerHTML="";
+  [...R.chars].sort((a,b)=>(b.up||0)-(a.up||0)).forEach(e=>{
+    const atual=e.id===R.currentId;
+    const d=document.createElement("div"); d.className="card note";
+    if(atual) d.style.outline="2px solid var(--gold)";
+    const sub=[e.char.jogador&&`jogador: ${e.char.jogador}`, e.char.classe&&`${e.char.classe} ${e.char.nivel||1}`, e.char.especie, e.char.antecedente].filter(Boolean).join(" • ");
+    const dt=new Date(e.up||Date.now()).toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"});
+    d.innerHTML=`<h3></h3>
+      <div class="dt">${sub?sub+" — ":""}última alteração: ${dt}${atual?"  ✦ aberto":""}</div>
+      <div style="display:flex; gap:8px; margin-top:10px">
+        <button class="gbtn" style="flex:1">Abrir ficha</button>
+        <button class="gbtn ghost danger delx">Apagar</button>
+      </div>`;
+    d.querySelector("h3").textContent=e.char.nome||"(herói sem nome)";
+    d.querySelector(".gbtn").onclick=(ev)=>{ ev.stopPropagation(); openChar(e.id); };
+    d.querySelector(".delx").onclick=(ev)=>{ ev.stopPropagation(); delChar(e.id); };
+    d.onclick=()=>openChar(e.id);
+    el.appendChild(d);
+  });
+}
+function openChar(id){
+  const e=R.chars.find(c=>c.id===id); if(!e) return;
+  S=e; R.currentId=id; openSpell=null; editingId=null; closeNote();
+  renderAll(); save(); showTab("ficha");
+  fbConectar(false);
+  setSaveState(`ficha de ${e.char.nome||"herói sem nome"} aberta ✧`,true);
+}
+function newChar(){
+  const e=blankEntry();
+  R.chars.push(e);
+  openChar(e.id);
+  document.getElementById("c_nome").focus();
+  setSaveState("novo herói criado — dê um nome a ele ✧",true);
+}
+function delChar(id){
+  const e=R.chars.find(c=>c.id===id); if(!e) return;
+  if(!confirm(`Apagar "${e.char.nome||"herói sem nome"}" e todas as anotações dele? Isso não pode ser desfeito.`)) return;
+  R.chars=R.chars.filter(c=>c.id!==id);
+  if(!R.chars.length) R.chars=[blankEntry()];
+  if(R.currentId===id){
+    S=[...R.chars].sort((a,b)=>(b.up||0)-(a.up||0))[0];
+    R.currentId=S.id;
+    renderAll();
+  }
+  renderRoster(); save();
+}
+
+/* ================== geral ================== */
+const TABS={ficha:"tabFicha", notas:"tabNotas", herois:"tabHerois", mesa:"tabMesa", mapa:"tabMapa"};
+function showTab(t){
+  for(const k in TABS){
+    document.getElementById(k).classList.toggle("on",k===t);
+    document.getElementById(TABS[k]).classList.toggle("on",k===t);
+  }
+  if(t==="herois") renderRoster();
+  if(t==="mesa"){ renderPresenca(); chatParaOpcoes(); renderChat(); }
+  if(t==="mapa") mapaZoomReset();
+}
+async function resetAll(){
+  if(!confirm("Apagar TODOS os heróis, fichas e anotações da galeria? Isso não pode ser desfeito.")) return;
+  R={version:2, currentId:null, chars:[blankEntry()], fb:R.fb, wall:R.wall, wallDim:R.wallDim, mapaAnotacoes:{src:"",ops:[]}, uiPos:R.uiPos||{}};
+  S=R.chars[0]; R.currentId=S.id;
+  try{ await storDel(); }catch(e){}
+  renderAll(); renderRoster(); save(); setSaveState("grimório limpo",true);
+}
+function whoami(){
+  const w=document.getElementById("whoami");
+  w.textContent="⚔ "+((S&&S.char.nome)||"herói sem nome");
+}
+function renderAll(){
+  renderAbilities(); renderDerived(); renderDeath(); renderSkills(); renderAtks();
+  renderSlots(); renderSpells(); renderMoedas(); renderPets(); bindFields(); renderNotes(); whoami(); fbBindUi(); applyWall(); applyCardOrder();
+}
+load();
+</script>
+</body>
+</html>
