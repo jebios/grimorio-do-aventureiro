@@ -153,6 +153,36 @@ if ("serviceWorker" in navigator) {
     background:#fff9ec; color:var(--ink); font-size:1rem; cursor:pointer;
   }
   .reordbar button:disabled{ opacity:.35; cursor:default; }
+  /* ---------- calculadora de ataque ---------- */
+  .dadobtn{
+    position:fixed; bottom:76px; right:16px; z-index:3300;
+    width:50px; height:50px; border-radius:50%;
+    background:linear-gradient(#3f2823,#33201d); border:1px solid var(--gold);
+    color:var(--gold-soft); font-size:1.4rem; cursor:grab; touch-action:none;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 16px #000000aa;
+  }
+  .dadobtn:active{ cursor:grabbing; }
+  #dadoPanel{
+    position:fixed; z-index:3300; width:300px; max-width:88vw; max-height:74vh;
+    display:flex; flex-direction:column; overflow-y:auto;
+    background:linear-gradient(160deg,#fbf6e6 0%,var(--parch) 45%,var(--parch-dark) 100%);
+    border:1px solid var(--gold); border-radius:8px; padding:14px;
+    box-shadow:0 14px 36px #000000bb;
+  }
+  .dadohead{display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:grab; touch-action:none;}
+  .dadohead:active{cursor:grabbing;}
+  .dadohead .xbtn{
+    width:30px; height:30px; border-radius:6px; border:1px solid var(--blood); color:var(--blood);
+    background:transparent; font-size:1rem; cursor:pointer; flex-shrink:0;
+  }
+  .dadosec{ border-top:1px dotted var(--parch-line); padding-top:10px; margin-top:10px; }
+  .dadosec:first-of-type{ border-top:none; margin-top:0; padding-top:0; }
+  #dadoLog{ margin-top:12px; max-height:180px; overflow-y:auto; border-top:1px dotted var(--parch-line); padding-top:8px; }
+  .dadoitem{ font-size:.86rem; padding:5px 2px; border-bottom:1px dotted var(--parch-line); line-height:1.4; }
+  .dadoitem b{ color:var(--ink-soft); font-weight:700; }
+  .dadoitem.crit{ color:#8a6a1e; font-weight:700; }
+  .dadoitem.fail{ color:var(--blood); }
   .libbtn{
     position:fixed; right:16px; bottom:16px; z-index:3300;
     width:50px; height:50px; border-radius:50%;
@@ -424,6 +454,39 @@ if ("serviceWorker" in navigator) {
 <body>
 
 <div id="toastLayer"></div>
+
+<div id="dadoBtn" class="dadobtn" title="🎲 arraste para mover • toque para abrir">🎲</div>
+<div id="dadoPanel" style="display:none">
+  <div class="dadohead" id="dadoHead">
+    <h2 style="border:none; padding:0; margin:0; flex:1">🎲 Calculadora de Ataque</h2>
+    <button class="xbtn" onclick="dadoFechar()">✕</button>
+  </div>
+
+  <div class="dadosec">
+    <label>Bônus de ataque</label>
+    <div class="row r2">
+      <input type="number" id="dadoBonus" value="0" placeholder="+5">
+      <select id="dadoVant">
+        <option value="normal">normal</option>
+        <option value="vant">vantagem</option>
+        <option value="desvant">desvantagem</option>
+      </select>
+    </div>
+    <label style="margin-top:6px">CA do alvo (opcional)</label>
+    <input type="number" id="dadoCA" placeholder="ex.: 15">
+    <button class="gbtn" style="width:100%; padding:9px 0; margin-top:8px" onclick="dadoRolarAtaque()">🎯 rolar ataque</button>
+  </div>
+
+  <div class="dadosec">
+    <label>Dano (formato: 2d6+3)</label>
+    <div class="row r2">
+      <input type="text" id="dadoFormula" value="1d8+3" placeholder="1d8+3">
+      <button class="gbtn ghost" style="padding:9px 0" onclick="dadoRolarDano()">💥 rolar dano</button>
+    </div>
+  </div>
+
+  <div id="dadoLog"></div>
+</div>
 
 <div id="libBtn" class="libbtn" title="📚 arraste para mover • toque para abrir">📚</div>
 <div id="libPanel" style="display:none">
@@ -1873,6 +1936,116 @@ function fbAplicarEntrega(d){
   renderMoedas(); save();
   setSaveState("✦ "+rot+(d.venda?" comprado":" recebido")+" do mestre!",true);
 }
+
+/* ================== calculadora de ataque (dados) ================== */
+function dadoRolarAtaque(){
+  const bonus=Number(document.getElementById("dadoBonus").value)||0;
+  const caTxt=document.getElementById("dadoCA").value;
+  const ca=caTxt===""?null:Number(caTxt);
+  const modo=document.getElementById("dadoVant").value;
+  let d1=1+Math.floor(Math.random()*20), d2=null, usado=d1;
+  if(modo!=="normal"){
+    d2=1+Math.floor(Math.random()*20);
+    usado = modo==="vant" ? Math.max(d1,d2) : Math.min(d1,d2);
+  }
+  const total=usado+bonus;
+  const critico=usado===20, critFalha=usado===1;
+  let resFrase="";
+  let classe="";
+  if(critico){ resFrase="💥 CRÍTICO NATURAL!"; classe="crit"; }
+  else if(critFalha){ resFrase="❌ falha crítica natural"; classe="fail"; }
+  if(ca!=null && !critico && !critFalha){
+    const acerto=total>=ca;
+    resFrase=(acerto?"✔ ACERTOU":"✖ ERROU")+" (CA "+ca+")";
+    classe=acerto?"":"fail";
+  }else if(ca!=null && critico){ resFrase="💥 CRÍTICO — acerta automaticamente!"; }
+  else if(ca!=null && critFalha){ resFrase="❌ falha crítica — erra automaticamente"; }
+  const detalhe = d2!=null
+    ? `d20: ${d1} e ${d2} (${modo==="vant"?"vantagem, usa maior":"desvantagem, usa menor"} = ${usado})`
+    : `d20: ${usado}`;
+  dadoLogar("Ataque", `${detalhe} + ${bonus} = <b>${total}</b>`+(resFrase?`<br>${resFrase}`:""), classe);
+}
+function dadoRolarDano(){
+  const f=(document.getElementById("dadoFormula").value||"").trim().toLowerCase().replace(/\s+/g,"");
+  const m=f.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+  if(!m){ dadoLogar("Dano","fórmula inválida — use algo como 2d6+3",""); return; }
+  const n=parseInt(m[1],10), face=parseInt(m[2],10), mod=m[3]?parseInt(m[3],10):0;
+  if(n<1||n>100||face<2||face>1000){ dadoLogar("Dano","valores fora do razoável",""); return; }
+  let rolls=[], soma=0;
+  for(let i=0;i<n;i++){ const r=1+Math.floor(Math.random()*face); rolls.push(r); soma+=r; }
+  const total=soma+mod;
+  const modTxt = mod>0?" +"+mod:(mod<0?" "+mod:"");
+  dadoLogar("Dano", `[${rolls.join(", ")}]${modTxt} = <b>${total}</b>`, "");
+}
+function dadoLogar(tipo, html, classe){
+  const log=document.getElementById("dadoLog"); if(!log) return;
+  const item=document.createElement("div");
+  item.className="dadoitem"+(classe?" "+classe:"");
+  item.innerHTML=`<b>${tipo}:</b> ${html}`;
+  log.insertBefore(item, log.firstChild);
+  while(log.children.length>15) log.removeChild(log.lastChild);
+}
+function dadoPosicionar(){
+  const btn=document.getElementById("dadoBtn"), panel=document.getElementById("dadoPanel");
+  const br=btn.getBoundingClientRect();
+  let x=br.left-260, y=br.top;
+  if(x<8) x=br.right+8;
+  if(x+300>window.innerWidth-8) x=Math.max(8,window.innerWidth-308);
+  y=Math.max(8,Math.min(window.innerHeight-420,y));
+  panel.style.left=x+"px"; panel.style.top=y+"px";
+}
+function dadoAbrir(){
+  dadoPosicionar();
+  document.getElementById("dadoPanel").style.display="flex";
+}
+function dadoFechar(){
+  document.getElementById("dadoPanel").style.display="none";
+}
+(function dadoBind(){
+  function bind(){
+    const btn=document.getElementById("dadoBtn"), panel=document.getElementById("dadoPanel"), head=document.getElementById("dadoHead");
+    if(!btn||btn.dataset.bound) return;
+    btn.dataset.bound="1";
+    R.uiPos=R.uiPos||{};
+    if(R.uiPos.dadoBtn&&R.uiPos.dadoBtn.x!=null){
+      btn.style.left=R.uiPos.dadoBtn.x+"px"; btn.style.top=R.uiPos.dadoBtn.y+"px";
+      btn.style.right="auto"; btn.style.bottom="auto";
+    }
+    const pos=e=>{ const t=(e.touches&&e.touches[0])||e; return [t.clientX,t.clientY]; };
+    const arrastavel=(handle, aoSoltarMover, aoTocar)=>{
+      let moveu=false;
+      const down=e=>{
+        moveu=false;
+        const [sx0,sy0]=pos(e);
+        const sx=sx0-handle.parentElement.offsetLeft, sy=sy0-handle.parentElement.offsetTop;
+        const move=m=>{
+          m.preventDefault();
+          const [mx,my]=pos(m);
+          if(Math.abs(mx-sx0)+Math.abs(my-sy0)>6) moveu=true;
+          if(moveu) aoSoltarMover(Math.max(0,Math.min(window.innerWidth-50,mx-sx)), Math.max(0,Math.min(window.innerHeight-40,my-sy)));
+        };
+        const up=()=>{
+          document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
+          document.removeEventListener("touchmove",move); document.removeEventListener("touchend",up);
+          if(!moveu && aoTocar) aoTocar();
+        };
+        document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+        document.addEventListener("touchmove",move,{passive:false}); document.addEventListener("touchend",up);
+      };
+      handle.addEventListener("mousedown",down);
+      handle.addEventListener("touchstart",down,{passive:true});
+    };
+    arrastavel(btn, (x,y)=>{
+      btn.style.left=x+"px"; btn.style.top=y+"px"; btn.style.right="auto"; btn.style.bottom="auto";
+    }, ()=>{
+      R.uiPos=R.uiPos||{}; R.uiPos.dadoBtn={x:btn.offsetLeft,y:btn.offsetTop}; save();
+      if(panel.style.display==="none") dadoAbrir(); else dadoFechar();
+    });
+    arrastavel(head, (x,y)=>{ panel.style.left=x+"px"; panel.style.top=y+"px"; }, null);
+  }
+  if(document.readyState!=="loading") bind(); else document.addEventListener("DOMContentLoaded",bind);
+  document.addEventListener("DOMContentLoaded",()=>setTimeout(bind,300));
+})();
 
 /* ================== biblioteca rápida de regras (SRD 5.2, CC-BY-4.0) ================== */
 const REFLIB=[
