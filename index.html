@@ -128,6 +128,13 @@ if ("serviceWorker" in navigator) {
     padding:5px 12px; font-size:.85rem;
   }
   .preschip .pj{font-size:.72rem; color:var(--ink-soft);}
+  .toolmini-row{ display:flex; justify-content:flex-end; gap:6px; margin-bottom:10px; }
+  .toolmini{
+    padding:4px 10px; font-size:.7rem; border-radius:20px;
+    border:1px solid var(--parch-line); background:transparent; color:var(--ink-soft);
+    cursor:pointer; letter-spacing:.02em;
+  }
+  .toolmini.on{ border-color:var(--gold); color:var(--ink); background:#f0e6cf; }
   .card[data-card]{ position:relative; transition:box-shadow .15s; }
   .card[data-card].cardmin{ max-height:58px; overflow:hidden; }
   .card[data-card].cardmin::after{
@@ -135,22 +142,26 @@ if ("serviceWorker" in navigator) {
     background:linear-gradient(transparent, var(--parch)); pointer-events:none;
   }
   .cardmin-btn{
-    position:absolute; top:8px; right:10px; z-index:2;
-    width:28px; height:28px; border-radius:6px; border:1px solid var(--parch-line);
-    background:#fff9ec; color:var(--ink); font-size:.85rem; cursor:pointer;
+    position:absolute; top:9px; right:9px; z-index:2;
+    width:21px; height:21px; border-radius:5px; border:1px solid var(--parch-line);
+    background:#fff9ec99; color:var(--ink-soft); font-size:.64rem; cursor:pointer;
+    opacity:.6; transition:opacity .15s;
+    display:flex; align-items:center; justify-content:center;
   }
-  body.reord .cardmin-btn{ top:52px; }
+  .cardmin-btn:hover, .cardmin-btn:active{ opacity:1; }
+  body.reord .cardmin-btn{ top:36px; }
   body.reord .card[data-card]{
     box-shadow:0 0 0 2px var(--gold-soft), 0 3px 10px rgba(0,0,0,.15);
   }
   .reordbar{
-    display:none; align-items:center; justify-content:flex-end; gap:6px;
-    margin:-4px -2px 10px;
+    display:none; align-items:center; justify-content:flex-end; gap:4px;
+    margin:-2px -2px 8px; opacity:.75;
   }
   body.reord .reordbar{ display:flex; }
   .reordbar button{
-    width:34px; height:34px; border-radius:6px; border:1px solid var(--parch-line);
-    background:#fff9ec; color:var(--ink); font-size:1rem; cursor:pointer;
+    width:23px; height:23px; border-radius:5px; border:1px solid var(--parch-line);
+    background:#fff9ec99; color:var(--ink-soft); font-size:.68rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
   }
   .reordbar button:disabled{ opacity:.35; cursor:default; }
   /* ---------- calculadora de ataque ---------- */
@@ -239,6 +250,7 @@ if ("serviceWorker" in navigator) {
   .toast .ic{font-size:1.2rem; line-height:1;}
   .toast b{color:var(--gold-soft);}
   .toast .tt{font-size:.88rem; line-height:1.3; word-break:break-word;}
+  .toast .td{font-size:.78rem; color:var(--parch-dark); opacity:.85; display:block; margin-top:2px;}
   .toast.out{animation:toastOut .25s ease-in forwards;}
   @keyframes toastIn{from{opacity:0; transform:translateY(-14px);} to{opacity:1; transform:translateY(0);}}
   @keyframes toastOut{from{opacity:1; transform:translateY(0);} to{opacity:0; transform:translateY(-14px);}}
@@ -525,9 +537,9 @@ if ("serviceWorker" in navigator) {
 <main>
 <!-- ============ FICHA ============ -->
 <section id="ficha" class="tab on">
-  <div class="row r2" style="margin-bottom:12px">
-    <button class="add" id="reordBtn" onclick="toggleReorder()">↕ reorganizar quadros</button>
-    <button class="add" id="minTodosBtn" onclick="toggleMinTodos()">▾ minimizar tudo</button>
+  <div class="toolmini-row">
+    <button class="toolmini" id="reordBtn" onclick="toggleReorder()" title="reorganizar a ordem dos quadros">↕ organizar</button>
+    <button class="toolmini" id="minTodosBtn" onclick="toggleMinTodos()" title="minimizar ou expandir todos os quadros">▾ minimizar</button>
   </div>
   <div id="fichaCards">
 
@@ -801,6 +813,7 @@ if ("serviceWorker" in navigator) {
       <button class="gbtn ghost" style="padding:11px 0" onclick="document.getElementById('importFile').click()">restaurar</button>
     </div>
     <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importData(this)">
+    <button class="gbtn ghost danger" style="width:100%; padding:9px 0; margin-top:10px" onclick="resetAll()">apagar todos os dados deste aparelho</button>
   </div>
 
   <div class="card" style="margin-top:14px">
@@ -863,9 +876,7 @@ if ("serviceWorker" in navigator) {
 <!-- ============ MAPA (visualização) ============ -->
 </main>
 
-<footer>
-  <button onclick="resetAll()">apagar todos os dados</button>
-</footer>
+<footer></footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -1563,21 +1574,39 @@ async function exportToDM(){
 }
 
 /* ================== backup & restauração ================== */
-function exportData(){
-  const payload={app:"grimorio-dnd", versao:2, exportadoEm:new Date().toISOString(), dados:R};
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+function blobParaBase64(blob){
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=()=>res(rd.result);
+    rd.onerror=rej;
+    rd.readAsDataURL(blob);
+  });
+}
+async function exportData(){
+  setSaveState("preparando backup (incluindo PDFs)...");
+  const pdfs=[];
+  try{
+    const idx=await pdfIndice();
+    for(const it of idx){
+      const f=await pdfGet(it.id);
+      if(f) pdfs.push({id:it.id, nome:it.nome, ts:it.ts, dados:await blobParaBase64(f)});
+    }
+  }catch(e){}
+  const payload={app:"grimorio-dnd", versao:2, exportadoEm:new Date().toISOString(), dados:R, pdfs};
+  const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download=`backup-grimorio-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
-  setSaveState("backup da galeria baixado ✧",true);
+  const mb=(blob.size/1024/1024).toFixed(1);
+  setSaveState(`backup baixado (${mb} MB, com ${pdfs.length} PDF(s)) ✧`,true);
 }
 function importData(inp){
   const f=inp.files && inp.files[0];
   if(!f) return;
   const rd=new FileReader();
-  rd.onload=()=>{
+  rd.onload=async ()=>{
     try{
       const p=JSON.parse(rd.result);
       const d=p.dados||p;
@@ -1595,7 +1624,22 @@ function importData(inp){
         R.chars.push(e); S=e; R.currentId=e.id;
       }else throw new Error("formato");
       renderAll(); renderRoster(); save();
-      setSaveState("backup restaurado ✧",true);
+      // restaura PDFs guardados no backup (se houver)
+      if(Array.isArray(p.pdfs) && p.pdfs.length){
+        for(const it of p.pdfs){
+          try{
+            const resp=await fetch(it.dados);
+            const blob=await resp.blob();
+            const file=new File([blob], it.nome, {type:"application/pdf"});
+            await pdfSet(it.id, file);
+          }catch(e){}
+        }
+        const idxAtual=await pdfIndice();
+        const idsAtuais=new Set(idxAtual.map(x=>x.id));
+        const novos=p.pdfs.filter(x=>!idsAtuais.has(x.id)).map(x=>({id:x.id, nome:x.nome, ts:x.ts||Date.now()}));
+        await pdfSet("_index",[...idxAtual,...novos]);
+      }
+      setSaveState("backup restaurado ✧"+(p.pdfs&&p.pdfs.length?` (+${p.pdfs.length} PDF(s))`:""),true);
     }catch(e){
       alert("Este arquivo não parece ser um backup do Grimório. Escolha o arquivo .json gerado pelo botão \u201csalvar backup\u201d.");
     }finally{ inp.value=""; }
@@ -1822,7 +1866,8 @@ function fbParseCfg(txt){
          .replace(/,\s*}/g,"}");
   try{ const o=JSON.parse(s); return (o&&o.apiKey&&o.projectId)?o:null; }catch(e){ return null; }
 }
-let fbApp=null, fbDb=null, fbUnsub=null, fbOk=false, fbPushTimer=null;
+let fbApp=null, fbDb=null, fbUnsub=null, fbOk=false, fbPushTimer=null, fbHeartbeat=null;
+const PRESENCA_TIMEOUT=90*1000;   // 90s sem atualizar = considerado offline
 function fbStatus(t,ok){ const e=document.getElementById("fbStatus");
   if(e){ e.textContent=t; e.style.color=ok?"var(--gold)":"var(--ink-soft)"; } }
 function fbBindUi(){
@@ -1835,10 +1880,31 @@ function fbBindUi(){
   if(!sala.dataset.bound){ sala.dataset.bound="1";
     sala.oninput=e=>{ S.sync.sala=e.target.value.trim().toUpperCase(); save(); }; }
 }
+let fbHiddenTimer=null;
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="hidden"){
+    // minimizou/trocou de app: só sai da sala se ficar fora por mais de 2 minutos
+    if(fbHiddenTimer) clearTimeout(fbHiddenTimer);
+    fbHiddenTimer=setTimeout(()=>{
+      if(fbOk && fbDb && S && S.sync && S.sync.on && S.sync.sala){
+        try{ fbDb.collection("salas").doc(S.sync.sala).collection("herois").doc(S.id).delete(); }catch(e){}
+      }
+    }, 120000);
+  }else{
+    if(fbHiddenTimer){ clearTimeout(fbHiddenTimer); fbHiddenTimer=null; }
+    if(fbOk) fbPushHero();   // voltou: reafirma presença na hora
+  }
+});
 function fbToggle(){
   S.sync=S.sync||{sala:"", on:false};
-  if(S.sync.on){ S.sync.on=false; if(fbUnsub){try{fbUnsub();}catch(e){}} fbUnsub=null; fbOk=false;
-    fbStatus("desconectado"); fbBindUi(); save(); return; }
+  if(S.sync.on){
+    const salaAntiga=S.sync.sala, idAntigo=S.id;
+    S.sync.on=false; if(fbUnsub){try{fbUnsub();}catch(e){}} fbUnsub=null;
+    if(fbHeartbeat){ clearInterval(fbHeartbeat); fbHeartbeat=null; }
+    if(fbDb&&salaAntiga){ fbDb.collection("salas").doc(salaAntiga).collection("herois").doc(idAntigo).delete().catch(()=>{}); }
+    fbOk=false;
+    fbStatus("desconectado"); fbBindUi(); save(); return;
+  }
   S.sync.on=true; save(); fbBindUi(); fbConectar(true);
 }
 async function fbConectar(manual){
@@ -1856,6 +1922,8 @@ async function fbConectar(manual){
     const sala=S.sync.sala, heroiId=S.id;
     fbOk=true;          // conectado ANTES do primeiro envio (senão ele é ignorado)
     fbPushHero();       // envia a ficha atual imediatamente
+    if(fbHeartbeat) clearInterval(fbHeartbeat);
+    fbHeartbeat=setInterval(()=>{ if(fbOk) fbPushHero(); }, 30000);   // mantém a presença "viva" na mesa
     // 1) edições feitas pelo mestre no Escudo chegam aqui e atualizam a ficha
     const u1=fbDb.collection("salas").doc(sala).collection("herois").doc(heroiId)
       .onSnapshot(doc=>{
@@ -1891,11 +1959,16 @@ async function fbConectar(manual){
     // 3) presença: nomes dos heróis conectados na sala
     const u3=fbDb.collection("salas").doc(sala).collection("herois")
       .onSnapshot(snap=>{
-        fbPres=[];
+        fbPresRaw=[];
         snap.forEach(doc=>{ const d=doc.data();
-          if(d&&d.char) fbPres.push({id:doc.id, nome:d.char.nome||d.nome||"herói", jog:d.char.jogador||""}); });
+          if(!d||!d.char) return;
+          fbPresRaw.push({id:doc.id, nome:d.char.nome||d.nome||"herói", jog:d.char.jogador||"", up:d.up||0});
+        });
         renderPresenca(); chatParaOpcoes();
       }, ()=>{});
+    // reavalia a presença periodicamente (some quem parou de atualizar, mesmo sem nova mensagem chegar)
+    if(fbPresCheck) clearInterval(fbPresCheck);
+    fbPresCheck=setInterval(()=>{ if(S&&S.sync&&S.sync.on) renderPresenca(); }, 15000);
     // 4) chat da mesa
     fbChatLast=Date.now();
     const u4=fbDb.collection("salas").doc(sala).collection("chat")
@@ -1931,10 +2004,23 @@ function fbAplicarEntrega(d){
     if(S.char.moedas.po>=d.totalPO){ S.char.moedas.po=Math.round((S.char.moedas.po-d.totalPO)*100)/100; }
     else { linha+=" (saldo de PO insuficiente — acerte com o mestre)"; }
   }
+  if(d.descricao && d.descricao.trim()) linha+="\n   ↳ "+d.descricao.trim();
   S.char.equip=(S.char.equip?S.char.equip+"\n":"")+linha;
   const eq=document.getElementById("c_equip"); if(eq) eq.value=S.char.equip;
   renderMoedas(); save();
   setSaveState("✦ "+rot+(d.venda?" comprado":" recebido")+" do mestre!",true);
+  mostrarToastItem(rot, d.descricao, d.venda);
+}
+function mostrarToastItem(nome, descricao, venda){
+  const layer=document.getElementById("toastLayer"); if(!layer) return;
+  const el=document.createElement("div"); el.className="toast";
+  el.innerHTML=`<span class="ic">${venda?"💰":"🎁"}</span><div class="tt"><b></b><br><span class="td"></span></div>`;
+  el.querySelector("b").textContent=nome+(venda?" (comprado)":" (recebido)");
+  if(descricao&&descricao.trim()) el.querySelector(".td").textContent=descricao.trim();
+  const sair=()=>{ if(!el.parentNode) return; el.classList.add("out"); setTimeout(()=>el.remove(),260); };
+  el.onclick=()=>{ sair(); showTab("ficha"); };
+  layer.appendChild(el);
+  setTimeout(sair,7000);
 }
 
 /* ================== calculadora de ataque (dados) ================== */
@@ -2259,7 +2345,9 @@ let reordOn=false;
 function toggleReorder(){
   reordOn=!reordOn;
   document.body.classList.toggle("reord",reordOn);
-  document.getElementById("reordBtn").textContent=reordOn?"✓ concluir reorganização":"↕ reorganizar quadros";
+  const rb=document.getElementById("reordBtn");
+  rb.textContent=reordOn?"✓ concluir":"↕ organizar";
+  rb.classList.toggle("on",reordOn);
   applyCardOrder();
 }
 function cardOrdem(){
@@ -2290,7 +2378,11 @@ function applyCardMin(){
     btn.title=min.has(key)?"expandir "+NOME_CARD[key]:"minimizar "+NOME_CARD[key];
   });
   const btnTodos=document.getElementById("minTodosBtn");
-  if(btnTodos) btnTodos.textContent = min.size>=ORDEM_PADRAO.length ? "▸ expandir tudo" : "▾ minimizar tudo";
+  if(btnTodos){
+    const tudoMin=min.size>=ORDEM_PADRAO.length;
+    btnTodos.textContent = tudoMin ? "▸ expandir" : "▾ minimizar";
+    btnTodos.classList.toggle("on",tudoMin);
+  }
 }
 function toggleCardMin(key){
   S.char.cardsMin=S.char.cardsMin||[];
@@ -2515,7 +2607,7 @@ function mostrarToast(m){
 }
 
 /* ================== presença e chat da mesa ================== */
-let fbPres=[], fbChat=[], fbChatLast=0;
+let fbPres=[], fbPresRaw=[], fbPresCheck=null, fbChat=[], fbChatLast=0;
 function chatParaOpcoes(){
   const sel=document.getElementById("chatPara"); if(!sel) return;
   const atual=sel.value;
@@ -2530,6 +2622,14 @@ function chatParaOpcoes(){
 }
 function renderPresenca(){
   const el=document.getElementById("fbPresenca"); if(!el) return;
+  const agora=Date.now();
+  fbPres=fbPresRaw.filter(p=>(agora-(p.up||0))<=PRESENCA_TIMEOUT);
+  // faxina: fichas muito velhas (3x o tempo-limite) são apagadas da sala para não acumular fantasma
+  if(fbOk&&fbDb&&S.sync&&S.sync.sala){
+    fbPresRaw.filter(p=>(agora-(p.up||0))>PRESENCA_TIMEOUT*3).forEach(p=>{
+      fbDb.collection("salas").doc(S.sync.sala).collection("herois").doc(p.id).delete().catch(()=>{});
+    });
+  }
   if(!fbOk||!fbPres.length){
     el.innerHTML='<div class="empty">'+(fbOk?"ninguém na sala ainda":"conecte-se à sala do mestre (aba Heróis → Mesa Online)")+'</div>';
     return;
