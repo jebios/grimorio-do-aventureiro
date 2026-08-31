@@ -1,6 +1,2 @@
-GRIMÓRIO DO AVENTUREIRO — instalação (Android, iPhone e Windows)
-=================================================================
-Arraste ESTA PASTA INTEIRA em https://app.netlify.com/drop (ou GitHub Pages / Cloudflare Pages).
-ANDROID: Chrome → menu ⋮ → "Instalar app".
-IPHONE: SAFARI → compartilhar ↑ → "Adicionar à Tela de Início".
-WINDOWS: Edge → ⊕ "Instalar" na barra de endereço.
+GRIMÓRIO — instale arrastando esta pasta no seu site publicado (Netlify/GitHub Pages/Cloudflare).
+ANDROID: Chrome > Instalar app. IPHONE: Safari > compartilhar > Adicionar à Tela de Início.

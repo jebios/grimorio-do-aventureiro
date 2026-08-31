@@ -749,7 +749,7 @@ if ("serviceWorker" in navigator) {
   <div class="card" style="padding:0; overflow:hidden">
     <div id="mapaEmpty" class="empty" style="padding:30px 14px">o mestre ainda não enviou um mapa</div>
     <div id="mapaViewWrap" style="display:none">
-      <select id="mapaSelectJogador" style="display:none; width:100%; margin-bottom:8px" onchange="mapaEscolherRecebido(this.value)"></select>
+      <select id="mapaSelectJogador" style="display:none; width:100%; margin:10px 10px 8px; font-weight:700" onchange="mapaEscolherRecebido(this.value)"></select>
       <div class="mapctrl">
         <button onclick="mapaZoom(-0.25)">－</button>
         <button onclick="mapaZoomReset()">100%</button>
@@ -2453,10 +2453,9 @@ function mapaAtualizarLista(){
   if(!mapaSelecionadoId || !mapasRecebidos.some(m=>m.id===mapaSelecionadoId)){
     mapaEscolherRecebido(mapasRecebidos[0].id, true);
   }
-  sel.style.display = mapasRecebidos.length>1 ? "block" : "none";
-  const atual=sel.value;
+  sel.style.display="block";   // sempre visível, mesmo com 1 mapa só — deixa claro que dá pra trocar
   sel.innerHTML=mapasRecebidos.map(m=>`<option value="${m.id}"${m.id===mapaSelecionadoId?" selected":""}></option>`).join("");
-  [...sel.options].forEach((o,i)=>{ o.textContent=mapasRecebidos[i].nome||"Mapa"; });
+  [...sel.options].forEach((o,i)=>{ o.textContent="🗺 "+(mapasRecebidos[i].nome||"Mapa"); });
 }
 function mapaEscolherRecebido(id, silencioso){
   const m=mapasRecebidos.find(x=>x.id===id); if(!m) return;

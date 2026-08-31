@@ -1,6 +1,5 @@
 {
-  "name": "Grimório do Aventureiro",
-  "short_name": "Grimório",
+  "name": "Grimório do Aventureiro", "short_name": "Grimório",
   "description": "Ficha e diário de aventuras — D&D 2024",
   "lang": "pt-BR", "start_url": "./index.html", "scope": "./",
   "display": "standalone", "orientation": "any",
