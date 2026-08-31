@@ -749,6 +749,7 @@ if ("serviceWorker" in navigator) {
   <div class="card" style="padding:0; overflow:hidden">
     <div id="mapaEmpty" class="empty" style="padding:30px 14px">o mestre ainda não enviou um mapa</div>
     <div id="mapaViewWrap" style="display:none">
+      <select id="mapaSelectJogador" style="display:none; width:100%; margin-bottom:8px" onchange="mapaEscolherRecebido(this.value)"></select>
       <div class="mapctrl">
         <button onclick="mapaZoom(-0.25)">－</button>
         <button onclick="mapaZoomReset()">100%</button>
@@ -941,7 +942,8 @@ async function load(){
     try{
       const d=JSON.parse(raw);
       R={version:2, currentId:d.currentId||null, chars:(d.chars||[]).map(migrateEntry),
-         fb:d.fb, wall:d.wall||"", wallDim:d.wallDim??82, mapaAnotacoes:d.mapaAnotacoes||{src:"",ops:[]}, uiPos:d.uiPos||{}};
+         fb:d.fb, wall:d.wall||"", wallDim:d.wallDim??82,
+         mapaAnotacoes:(d.mapaAnotacoes&&!Array.isArray(d.mapaAnotacoes.ops))?d.mapaAnotacoes:{}, uiPos:d.uiPos||{}};
       setSaveState("dados carregados ✧",true);
     }catch(e){ setSaveState("não consegui ler os dados salvos"); }
   }else{
@@ -1614,7 +1616,8 @@ function importData(inp){
         // backup novo: galeria completa
         if(!confirm(`Restaurar a galeria com ${d.chars.length} herói(s)? Isso substitui TODOS os personagens atuais.`)) return;
         R={version:2, currentId:d.currentId||null, chars:d.chars.map(migrateEntry),
-           fb:R.fb, wall:d.wall||R.wall, wallDim:d.wallDim??R.wallDim, mapaAnotacoes:d.mapaAnotacoes||R.mapaAnotacoes||{src:"",ops:[]}, uiPos:d.uiPos||R.uiPos||{}};
+           fb:R.fb, wall:d.wall||R.wall, wallDim:d.wallDim??R.wallDim,
+           mapaAnotacoes:(d.mapaAnotacoes&&!Array.isArray(d.mapaAnotacoes.ops))?d.mapaAnotacoes:(R.mapaAnotacoes&&!Array.isArray(R.mapaAnotacoes.ops)?R.mapaAnotacoes:{}), uiPos:d.uiPos||R.uiPos||{}};
         if(!R.chars.length) R.chars=[blankEntry()];
         S=R.chars.find(c=>c.id===R.currentId)||R.chars[0]; R.currentId=S.id;
       }else if(d.char && typeof d.char==="object"){
@@ -1936,11 +1939,13 @@ async function fbConectar(manual){
         renderAll(); save();
         setSaveState("✦ ficha atualizada pelo mestre",true);
       }, ()=>{});
-    // 1.5) mapa da campanha enviado pelo mestre
-    const uM=fbDb.collection("salas").doc(sala).collection("mapa").doc("atual")
-      .onSnapshot(doc=>{
-        const d=doc.data();
-        if(d&&d.img) mapaReceber(d.img);
+    // 1.5) mapas da campanha enviados pelo mestre (podem ser vários)
+    const uM=fbDb.collection("salas").doc(sala).collection("mapas")
+      .onSnapshot(snap=>{
+        mapasRecebidos=[];
+        snap.forEach(doc=>{ const d=doc.data(); if(d&&d.img) mapasRecebidos.push({id:doc.id, nome:d.nome||"Mapa", img:d.img, ts:d.ts||0}); });
+        mapasRecebidos.sort((a,b)=>b.ts-a.ts);
+        mapaAtualizarLista();
       }, ()=>{});
     // 2) itens entregues/vendidos
     const u2=fbDb.collection("salas").doc(sala).collection("entregas")
@@ -2420,22 +2425,44 @@ function applyCardOrder(){
 }
 
 /* ================== mapa (visualização + marcações do jogador) ================== */
-let mapaZ=1, mapaTx=0, mapaTy=0, mapaUltimoSrc="";
-let mapaImgObj=null;                 // Image() carregada do mestre
+let mapaZ=1, mapaTx=0, mapaTy=0;
+let mapasRecebidos=[];               // [{id,nome,img,ts}] — todos os mapas que o mestre enviou
+let mapaSelecionadoId=null;          // qual deles este jogador está vendo agora
+let mapaImgObj=null;                 // Image() carregada do mapa atual
 let mapaPlayerTool=null;             // 'pin' | 'draw' | null
 const mapaPlayerCor="#1565c0";
 let mapaDrawing=false, mapaStrokeAtual=null;
 
-function mapaGarantirAnot(src){
-  R.mapaAnotacoes=R.mapaAnotacoes||{src:"",ops:[]};
-  if(R.mapaAnotacoes.src!==src){ R.mapaAnotacoes={src, ops:[]}; save(); }
+function mapaGarantirAnot(id){
+  R.mapaAnotacoes=R.mapaAnotacoes||{};
+  if(!R.mapaAnotacoes[id]) R.mapaAnotacoes[id]={ops:[]};
 }
-function mapaReceber(src){
-  if(src===mapaUltimoSrc) return;
-  mapaUltimoSrc=src;
-  mapaGarantirAnot(src);
-  document.getElementById("mapaEmpty").style.display="none";
-  document.getElementById("mapaViewWrap").style.display="block";
+function mapaOpsAtuais(){
+  if(!mapaSelecionadoId) return [];
+  mapaGarantirAnot(mapaSelecionadoId);
+  return R.mapaAnotacoes[mapaSelecionadoId].ops;
+}
+function mapaAtualizarLista(){
+  const vazio=document.getElementById("mapaEmpty"), wrap=document.getElementById("mapaViewWrap"), sel=document.getElementById("mapaSelectJogador");
+  if(!mapasRecebidos.length){
+    vazio.style.display="block"; wrap.style.display="none";
+    return;
+  }
+  vazio.style.display="none"; wrap.style.display="block";
+  // se o mapa que estava vendo sumiu (mestre retirou), ou é a primeira vez, escolhe o mais novo
+  if(!mapaSelecionadoId || !mapasRecebidos.some(m=>m.id===mapaSelecionadoId)){
+    mapaEscolherRecebido(mapasRecebidos[0].id, true);
+  }
+  sel.style.display = mapasRecebidos.length>1 ? "block" : "none";
+  const atual=sel.value;
+  sel.innerHTML=mapasRecebidos.map(m=>`<option value="${m.id}"${m.id===mapaSelecionadoId?" selected":""}></option>`).join("");
+  [...sel.options].forEach((o,i)=>{ o.textContent=mapasRecebidos[i].nome||"Mapa"; });
+}
+function mapaEscolherRecebido(id, silencioso){
+  const m=mapasRecebidos.find(x=>x.id===id); if(!m) return;
+  const trocou = mapaSelecionadoId!==id;
+  mapaSelecionadoId=id;
+  mapaGarantirAnot(id);
   const im=new Image();
   im.onload=()=>{
     mapaImgObj=im;
@@ -2444,9 +2471,11 @@ function mapaReceber(src){
     mapaRedesenhar();
     mapaZoomReset();
   };
-  im.src=src;
-  if(document.getElementById("mapa").classList.contains("on")) return; // já está vendo
-  setSaveState("🗺 novo mapa do mestre!",true);
+  im.src=m.img;
+  const sel=document.getElementById("mapaSelectJogador"); if(sel) sel.value=id;
+  if(!silencioso && trocou && !document.getElementById("mapa").classList.contains("on")){
+    setSaveState("🗺 "+(m.nome||"novo mapa")+" do mestre!",true);
+  }
 }
 function mapaDesenharOp(ctx,op,W,H){
   if(op.type==="pin"){
@@ -2474,7 +2503,7 @@ function mapaRedesenhar(){
   const ctx=cv.getContext("2d");
   ctx.clearRect(0,0,cv.width,cv.height);
   ctx.drawImage(mapaImgObj,0,0,cv.width,cv.height);
-  ((R.mapaAnotacoes&&R.mapaAnotacoes.ops)||[]).forEach(op=>mapaDesenharOp(ctx,op,cv.width,cv.height));
+  mapaOpsAtuais().forEach(op=>mapaDesenharOp(ctx,op,cv.width,cv.height));
 }
 function mapaPlayerFerramenta(t){
   mapaPlayerTool=(mapaPlayerTool===t)?null:t;
@@ -2482,13 +2511,15 @@ function mapaPlayerFerramenta(t){
   document.getElementById("mpDraw").classList.toggle("on",mapaPlayerTool==="draw");
 }
 function mapaPlayerDesfazer(){
-  if(!R.mapaAnotacoes||!R.mapaAnotacoes.ops.length) return;
-  R.mapaAnotacoes.ops.pop(); save(); mapaRedesenhar();
+  const ops=mapaOpsAtuais();
+  if(!ops.length) return;
+  ops.pop(); save(); mapaRedesenhar();
 }
 function mapaPlayerLimpar(){
-  if(!R.mapaAnotacoes||!R.mapaAnotacoes.ops.length) return;
+  const ops=mapaOpsAtuais();
+  if(!ops.length) return;
   if(!confirm("Apagar todas as suas marcações neste mapa?")) return;
-  R.mapaAnotacoes.ops=[]; save(); mapaRedesenhar();
+  R.mapaAnotacoes[mapaSelecionadoId].ops=[]; save(); mapaRedesenhar();
 }
 function mapaAplicarTransform(){
   const cv=document.getElementById("mapaCanvasEl"); if(!cv) return;
@@ -2538,8 +2569,7 @@ function mapaZoomReset(){
         e.preventDefault();
         const [x,y]=relPos(e);
         const label=(prompt("Rótulo do seu marcador (opcional):")||"").slice(0,30);
-        R.mapaAnotacoes=R.mapaAnotacoes||{src:mapaUltimoSrc,ops:[]};
-        R.mapaAnotacoes.ops.push({type:"pin", x, y, color:mapaPlayerCor, label});
+        mapaOpsAtuais().push({type:"pin", x, y, color:mapaPlayerCor, label});
         save(); mapaRedesenhar();
         return;
       }
@@ -2578,8 +2608,7 @@ function mapaZoomReset(){
       if(mapaPlayerTool==="draw"&&mapaDrawing){
         mapaDrawing=false;
         if(mapaStrokeAtual&&mapaStrokeAtual.points.length>1){
-          R.mapaAnotacoes=R.mapaAnotacoes||{src:mapaUltimoSrc,ops:[]};
-          R.mapaAnotacoes.ops.push(mapaStrokeAtual); save();
+          mapaOpsAtuais().push(mapaStrokeAtual); save();
         }
         mapaStrokeAtual=null; mapaRedesenhar();
       }
@@ -2946,7 +2975,7 @@ function showTab(t){
 }
 async function resetAll(){
   if(!confirm("Apagar TODOS os heróis, fichas e anotações da galeria? Isso não pode ser desfeito.")) return;
-  R={version:2, currentId:null, chars:[blankEntry()], fb:R.fb, wall:R.wall, wallDim:R.wallDim, mapaAnotacoes:{src:"",ops:[]}, uiPos:R.uiPos||{}};
+  R={version:2, currentId:null, chars:[blankEntry()], fb:R.fb, wall:R.wall, wallDim:R.wallDim, mapaAnotacoes:{}, uiPos:R.uiPos||{}};
   S=R.chars[0]; R.currentId=S.id;
   try{ await storDel(); }catch(e){}
   renderAll(); renderRoster(); save(); setSaveState("grimório limpo",true);
