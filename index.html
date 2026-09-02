@@ -168,6 +168,16 @@ if ("serviceWorker" in navigator) {
     display:flex; align-items:center; justify-content:center; pointer-events:none;
   }
   .figcol{ flex:1; min-width:0; }
+  .armamagitem{
+    display:flex; align-items:center; gap:7px; padding:5px 0;
+    border-bottom:1px dotted var(--parch-line);
+  }
+  .armamagitem input[type="checkbox"]{ width:17px; height:17px; cursor:pointer; flex-shrink:0; }
+  .armamagitem input[type="text"]{ flex:1; padding:6px 8px; font-size:.88rem; min-width:0; }
+  .armamagitem .xbtn{
+    width:28px; height:28px; border-radius:6px; border:1px solid var(--blood); color:var(--blood);
+    background:transparent; font-size:1rem; cursor:pointer; flex-shrink:0;
+  }
   .magitem-row{
     display:flex; flex-direction:column; gap:2px; padding:5px 0;
     border-bottom:1px dotted var(--parch-line);
@@ -780,6 +790,9 @@ if ("serviceWorker" in navigator) {
       </div>
       <div id="slotsMagicosDir" class="figcol"></div>
     </div>
+    <label style="margin-top:10px">Armas, Escudos e Outros Itens Mágicos</label>
+    <div id="armasMagicasList"></div>
+    <button class="add" onclick="armaMagicaAdd()">+ arma / item mágico</button>
     <label style="margin-top:10px">Propriedades e efeitos (notas gerais)</label>
     <textarea id="c_itensmagicosnotas" data-k="itensMagicosNotas" placeholder="Cargas restantes, condições de ativação, maldições..." style="min-height:70px"></textarea>
   </div>
@@ -962,7 +975,7 @@ function blankEntry(){
     up:Date.now(),
     char:{nome:"",jogador:"",classe:"",nivel:1,especie:"",antecedente:"",subclasse:"",alinhamento:"",
       ca:10,desloc:"9m",hp:10,hpmax:10,hptemp:0,insp:false,dsS:0,dsF:0,atknotas:"",
-    itensMagicos:{}, itensMagicosNotas:"", retrato:"",
+    itensMagicos:{}, itensMagicosNotas:"", retrato:"", armasMagicas:[],
       abs:{for:10,des:10,con:10,int:10,sab:10,car:10},
       profs:{}, skillExtra:{}, initExtra:0, atks:[], pets:[], spells:[], slots:{},
       moedas:{pc:0,pp:0,pe:0,po:0,pl:0}, hplog:[], turno:1,
@@ -2794,9 +2807,40 @@ function renderItensMagicos(){
 }
 function atualizarContadorSintonia(){
   const el=document.getElementById("sintContador"); if(!el) return;
-  const n=Object.values(S.char.itensMagicos||{}).filter(x=>x&&x.sint).length;
+  const nSlots=Object.values(S.char.itensMagicos||{}).filter(x=>x&&typeof x==="object"&&x.sint).length;
+  const nArmas=(S.char.armasMagicas||[]).filter(x=>x&&x.sint).length;
+  const n=nSlots+nArmas;
   el.textContent=`— sintonizados: ${n}/3`;
   el.style.color = n>3 ? "var(--blood)" : "var(--ink-soft)";
+}
+function armaMagicaAdd(){
+  S.char.armasMagicas=S.char.armasMagicas||[];
+  S.char.armasMagicas.push({nome:"", sint:false});
+  save(); renderArmasMagicas();
+}
+function armaMagicaRemover(i){
+  S.char.armasMagicas.splice(i,1);
+  save(); renderArmasMagicas(); atualizarContadorSintonia();
+}
+function renderArmasMagicas(){
+  const wrap=document.getElementById("armasMagicasList"); if(!wrap) return;
+  S.char.armasMagicas=S.char.armasMagicas||[];
+  wrap.innerHTML="";
+  if(!S.char.armasMagicas.length){
+    wrap.innerHTML='<div class="empty" style="padding:6px 2px">Nenhuma arma ou item mágico avulso ainda.</div>';
+  }
+  S.char.armasMagicas.forEach((it,i)=>{
+    const row=document.createElement("div"); row.className="armamagitem";
+    row.innerHTML=`<input type="checkbox" title="sintonizado">
+      <input type="text" placeholder="Espada Longa +1, Escudo Arcano...">
+      <button class="xbtn" title="remover">✕</button>`;
+    const chk=row.querySelector('input[type="checkbox"]'), inp=row.querySelector('input[type="text"]');
+    chk.checked=!!it.sint; inp.value=it.nome||"";
+    chk.onchange=()=>{ it.sint=chk.checked; save(); atualizarContadorSintonia(); };
+    inp.oninput=()=>{ it.nome=inp.value; save(); };
+    row.querySelector(".xbtn").onclick=()=>armaMagicaRemover(i);
+    wrap.appendChild(row);
+  });
 }
 
 function renderPresenca(){
@@ -3136,7 +3180,7 @@ function whoami(){
 }
 function renderAll(){
   renderAbilities(); renderDerived(); renderDeath(); renderSkills(); renderAtks();
-  renderSlots(); renderSpells(); renderMoedas(); renderPets(); renderItensMagicos(); renderRetrato(); bindFields(); renderNotes(); whoami(); fbBindUi(); applyWall(); applyCardOrder();
+  renderSlots(); renderSpells(); renderMoedas(); renderPets(); renderItensMagicos(); renderArmasMagicas(); renderRetrato(); bindFields(); renderNotes(); whoami(); fbBindUi(); applyWall(); applyCardOrder();
 }
 load();
 </script>
