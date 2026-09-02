@@ -1,4 +1,4 @@
-const CACHE = "grimorio-v7";
+const CACHE = "grimorio-v10";
 const PRECACHE = [
   "./index.html","icon-192.png","icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
