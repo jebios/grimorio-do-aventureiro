@@ -2172,16 +2172,20 @@ function dadoAbrir(){
 function dadoFechar(){
   document.getElementById("dadoPanel").style.display="none";
 }
+function dadoAplicarPosicaoSalva(){
+  const btn=document.getElementById("dadoBtn"); if(!btn) return;
+  R.uiPos=R.uiPos||{};
+  if(R.uiPos.dadoBtn&&R.uiPos.dadoBtn.x!=null){
+    btn.style.left=R.uiPos.dadoBtn.x+"px"; btn.style.top=R.uiPos.dadoBtn.y+"px";
+    btn.style.right="auto"; btn.style.bottom="auto";
+  }
+}
 (function dadoBind(){
   function bind(){
     const btn=document.getElementById("dadoBtn"), panel=document.getElementById("dadoPanel"), head=document.getElementById("dadoHead");
     if(!btn||btn.dataset.bound) return;
     btn.dataset.bound="1";
-    R.uiPos=R.uiPos||{};
-    if(R.uiPos.dadoBtn&&R.uiPos.dadoBtn.x!=null){
-      btn.style.left=R.uiPos.dadoBtn.x+"px"; btn.style.top=R.uiPos.dadoBtn.y+"px";
-      btn.style.right="auto"; btn.style.bottom="auto";
-    }
+    dadoAplicarPosicaoSalva();
     const pos=e=>{ const t=(e.touches&&e.touches[0])||e; return [t.clientX,t.clientY]; };
     const arrastavel=(handle, aoSoltarMover, aoTocar)=>{
       let moveu=false;
@@ -2375,16 +2379,20 @@ function libAbrir(){
 function libFechar(){
   document.getElementById("libPanel").style.display="none";
 }
+function libAplicarPosicaoSalva(){
+  const btn=document.getElementById("libBtn"); if(!btn) return;
+  R.uiPos=R.uiPos||{};
+  if(R.uiPos.libBtn&&R.uiPos.libBtn.x!=null){
+    btn.style.left=R.uiPos.libBtn.x+"px"; btn.style.top=R.uiPos.libBtn.y+"px";
+    btn.style.right="auto"; btn.style.bottom="auto";
+  }
+}
 (function libBind(){
   function bind(){
     const btn=document.getElementById("libBtn"), panel=document.getElementById("libPanel"), head=document.getElementById("libHead");
     if(!btn||btn.dataset.bound) return;
     btn.dataset.bound="1";
-    R.uiPos=R.uiPos||{};
-    if(R.uiPos.libBtn&&R.uiPos.libBtn.x!=null){
-      btn.style.left=R.uiPos.libBtn.x+"px"; btn.style.top=R.uiPos.libBtn.y+"px";
-      btn.style.right="auto"; btn.style.bottom="auto";
-    }
+    libAplicarPosicaoSalva();
     const pos=e=>{ const t=(e.touches&&e.touches[0])||e; return [t.clientX,t.clientY]; };
     const arrastavel=(handle, aoSoltarMover, aoTocar)=>{
       let moveu=false;
@@ -2418,6 +2426,7 @@ function libFechar(){
     arrastavel(head, (x,y)=>{ panel.style.left=x+"px"; panel.style.top=y+"px"; }, null);
   }
   if(document.readyState!=="loading") bind(); else document.addEventListener("DOMContentLoaded",bind);
+  document.addEventListener("DOMContentLoaded",()=>setTimeout(bind,300));
 })();
 
 /* ================== reordenar quadros da Ficha ================== */
@@ -3181,6 +3190,8 @@ function whoami(){
 function renderAll(){
   renderAbilities(); renderDerived(); renderDeath(); renderSkills(); renderAtks();
   renderSlots(); renderSpells(); renderMoedas(); renderPets(); renderItensMagicos(); renderArmasMagicas(); renderRetrato(); bindFields(); renderNotes(); whoami(); fbBindUi(); applyWall(); applyCardOrder();
+  if(typeof dadoAplicarPosicaoSalva==="function") dadoAplicarPosicaoSalva();
+  if(typeof libAplicarPosicaoSalva==="function") libAplicarPosicaoSalva();
 }
 load();
 </script>
