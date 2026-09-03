@@ -141,18 +141,35 @@ if ("serviceWorker" in navigator) {
     content:""; position:absolute; left:0; right:0; bottom:0; height:26px;
     background:linear-gradient(transparent, var(--parch)); pointer-events:none;
   }
-  .cardmin-btn{
-    position:absolute; top:9px; right:9px; z-index:2;
-    width:21px; height:21px; border-radius:5px; border:1px solid var(--parch-line);
-    background:#fff9ec99; color:var(--ink-soft); font-size:.64rem; cursor:pointer;
-    opacity:.6; transition:opacity .15s;
-    display:flex; align-items:center; justify-content:center;
+  .card[data-card].dragging{ opacity:.55; box-shadow:0 0 0 2px var(--gold-soft), 0 6px 16px rgba(0,0,0,.25); }
+  /* controles ao estilo Windows: minimizar/restaurar + fechar */
+  .cardwin{
+    position:absolute; top:8px; right:8px; z-index:2; display:flex; gap:2px;
   }
-  .cardmin-btn:hover, .cardmin-btn:active{ opacity:1; }
-  body.reord .cardmin-btn{ top:36px; }
-  body.reord .card[data-card]{
-    box-shadow:0 0 0 2px var(--gold-soft), 0 3px 10px rgba(0,0,0,.15);
+  .cardwin button{
+    width:26px; height:20px; border:1px solid var(--parch-line); border-radius:2px;
+    background:#f4f1e866; color:var(--ink-soft); font-size:.72rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; opacity:.55; transition:opacity .15s, background .15s;
   }
+  .cardwin button:hover{ opacity:1; background:#e8e2cf; }
+  .cardwin button.wclose:hover{ background:#c0392b; color:#fff; }
+  /* alça de arrastar, no canto oposto */
+  .carddrag{
+    position:absolute; top:8px; left:8px; z-index:2;
+    width:24px; height:20px; display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft); opacity:.4; font-size:.85rem; cursor:grab; touch-action:none;
+  }
+  .carddrag:active{ cursor:grabbing; opacity:1; }
+  /* botão e painel de quadros ocultos */
+  .ocultosPainel{
+    background:#fffdf5; border:1px solid var(--parch-line); border-radius:8px;
+    padding:8px 10px; margin:-4px 0 12px;
+  }
+  .ocultoRow{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:5px 0; border-bottom:1px dotted var(--parch-line); font-size:.84rem;
+  }
+  .ocultoRow:last-child{ border-bottom:none; }
   /* ---------- diagrama de itens mágicos ---------- */
   .figwrap{ display:flex; align-items:flex-start; gap:6px; }
   .figmid{ flex-shrink:0; display:flex; flex-direction:column; align-items:center; }
@@ -195,17 +212,7 @@ if ("serviceWorker" in navigator) {
     .figcol.dir .magitem-row{ align-items:stretch; text-align:left; }
     .figcol.dir .sr-top{ flex-direction:row; }
   }
-  .reordbar{
-    display:none; align-items:center; justify-content:flex-end; gap:4px;
-    margin:-2px -2px 8px; opacity:.75;
-  }
-  body.reord .reordbar{ display:flex; }
-  .reordbar button{
-    width:23px; height:23px; border-radius:5px; border:1px solid var(--parch-line);
-    background:#fff9ec99; color:var(--ink-soft); font-size:.68rem; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .reordbar button:disabled{ opacity:.35; cursor:default; }
+  .reordbar{ display:none; }
   /* ---------- calculadora de ataque ---------- */
   .dadobtn{
     position:fixed; bottom:76px; right:16px; z-index:3300;
@@ -580,9 +587,10 @@ if ("serviceWorker" in navigator) {
 <!-- ============ FICHA ============ -->
 <section id="ficha" class="tab on">
   <div class="toolmini-row">
-    <button class="toolmini" id="reordBtn" onclick="toggleReorder()" title="reorganizar a ordem dos quadros">↕ organizar</button>
-    <button class="toolmini" id="minTodosBtn" onclick="toggleMinTodos()" title="minimizar ou expandir todos os quadros">▾ minimizar</button>
+    <button class="toolmini" id="ocultosBtn" onclick="toggleOcultosPainel()" title="mostrar quadros ocultos">🗄 ocultos</button>
+    <span style="font-size:.64rem; color:var(--ink-soft); align-self:center">⠿ segure e arraste para reorganizar</span>
   </div>
+  <div id="ocultosPainel" class="ocultosPainel" style="display:none"></div>
   <div id="fichaCards">
 
   <div class="card" data-card="identidade">
@@ -975,7 +983,7 @@ function blankEntry(){
     up:Date.now(),
     char:{nome:"",jogador:"",classe:"",nivel:1,especie:"",antecedente:"",subclasse:"",alinhamento:"",
       ca:10,desloc:"9m",hp:10,hpmax:10,hptemp:0,insp:false,dsS:0,dsF:0,atknotas:"",
-    itensMagicos:{}, itensMagicosNotas:"", retrato:"", armasMagicas:[],
+    itensMagicos:{}, itensMagicosNotas:"", retrato:"", armasMagicas:[], cardsRemovidos:[],
       abs:{for:10,des:10,con:10,int:10,sab:10,car:10},
       profs:{}, skillExtra:{}, initExtra:0, atks:[], pets:[], spells:[], slots:{},
       moedas:{pc:0,pp:0,pe:0,po:0,pl:0}, hplog:[], turno:1,
@@ -2436,82 +2444,113 @@ const NOME_CARD={identidade:"Identidade",atributos:"Atributos",combate:"Combate"
   ataques:"Ataques",companheiros:"Companheiros",caracteristicas:"Características",tracos:"Traços de Espécie",
   talentos:"Talentos",treinamento:"Treinamento",magias:"Magias",idiomas:"Idiomas",moedas:"Moedas",
   itensmagicos:"Itens Mágicos",equipamento:"Equipamento"};
-let reordOn=false;
-function toggleReorder(){
-  reordOn=!reordOn;
-  document.body.classList.toggle("reord",reordOn);
-  const rb=document.getElementById("reordBtn");
-  rb.textContent=reordOn?"✓ concluir":"↕ organizar";
-  rb.classList.toggle("on",reordOn);
-  applyCardOrder();
-}
 function cardOrdem(){
   const salva=(S.char.ordemCards||[]).filter(k=>ORDEM_PADRAO.includes(k));
   const faltando=ORDEM_PADRAO.filter(k=>!salva.includes(k));
   return [...salva,...faltando];
 }
-function moveCard(key,dir){
-  const ord=cardOrdem();
-  const i=ord.indexOf(key), j=i+dir;
-  if(j<0||j>=ord.length) return;
-  [ord[i],ord[j]]=[ord[j],ord[i]];
-  S.char.ordemCards=ord;
+function cardFechar(key){
+  S.char.cardsRemovidos=S.char.cardsRemovidos||[];
+  if(!S.char.cardsRemovidos.includes(key)) S.char.cardsRemovidos.push(key);
   save(); applyCardOrder();
 }
-function applyCardMin(){
-  const min=new Set(S.char.cardsMin||[]);
-  ORDEM_PADRAO.forEach(key=>{
-    const el=document.querySelector(`#fichaCards [data-card="${key}"]`); if(!el) return;
-    el.classList.toggle("cardmin", min.has(key));
-    let btn=el.querySelector(".cardmin-btn");
-    if(!btn){
-      btn=document.createElement("button"); btn.className="cardmin-btn";
-      btn.onclick=(ev)=>{ ev.stopPropagation(); toggleCardMin(key); };
-      el.appendChild(btn);
-    }
-    btn.textContent=min.has(key)?"▸":"▾";
-    btn.title=min.has(key)?"expandir "+NOME_CARD[key]:"minimizar "+NOME_CARD[key];
-  });
-  const btnTodos=document.getElementById("minTodosBtn");
-  if(btnTodos){
-    const tudoMin=min.size>=ORDEM_PADRAO.length;
-    btnTodos.textContent = tudoMin ? "▸ expandir" : "▾ minimizar";
-    btnTodos.classList.toggle("on",tudoMin);
-  }
+function cardRestaurar(key){
+  S.char.cardsRemovidos=(S.char.cardsRemovidos||[]).filter(k=>k!==key);
+  save(); applyCardOrder(); renderOcultos();
 }
 function toggleCardMin(key){
   S.char.cardsMin=S.char.cardsMin||[];
   const i=S.char.cardsMin.indexOf(key);
   if(i>=0) S.char.cardsMin.splice(i,1); else S.char.cardsMin.push(key);
-  save(); applyCardMin();
+  save(); applyCardOrder();
 }
-function toggleMinTodos(){
-  const tudoMin=(S.char.cardsMin||[]).length>=ORDEM_PADRAO.length;
-  S.char.cardsMin=tudoMin?[]:ORDEM_PADRAO.slice();
-  save(); applyCardMin();
+function renderOcultos(){
+  const btn=document.getElementById("ocultosBtn"), painel=document.getElementById("ocultosPainel");
+  if(!btn||!painel) return;
+  const removidos=(S.char.cardsRemovidos||[]).filter(k=>ORDEM_PADRAO.includes(k));
+  btn.textContent = removidos.length ? `🗄 ocultos (${removidos.length})` : "🗄 ocultos";
+  btn.style.opacity = removidos.length ? "1" : ".55";
+  if(!removidos.length){ painel.style.display="none"; painel.innerHTML=""; return; }
+  painel.innerHTML="";
+  removidos.forEach(key=>{
+    const row=document.createElement("div"); row.className="ocultoRow";
+    row.innerHTML=`<span></span><button class="gbtn ghost" style="padding:4px 10px; font-size:.74rem">+ mostrar</button>`;
+    row.querySelector("span").textContent=NOME_CARD[key]||key;
+    row.querySelector("button").onclick=()=>cardRestaurar(key);
+    painel.appendChild(row);
+  });
+}
+function toggleOcultosPainel(){
+  const painel=document.getElementById("ocultosPainel");
+  if(!painel) return;
+  painel.style.display = painel.style.display==="block" ? "none" : "block";
+  if(painel.style.display==="block") renderOcultos();
+}
+function cardDragBind(el){
+  const handle=el.querySelector(".carddrag");
+  if(!handle||handle.dataset.bound) return;
+  handle.dataset.bound="1";
+  const posY=e=>(e.touches&&e.touches[0]?e.touches[0].clientY:e.clientY);
+  const down=e=>{
+    e.preventDefault();
+    const cont=document.getElementById("fichaCards"); if(!cont) return;
+    el.classList.add("dragging");
+    const move=m=>{
+      m.preventDefault();
+      const y=posY(m);
+      const irmãos=[...cont.querySelectorAll('.card[data-card]')].filter(x=>x!==el && x.style.display!=="none");
+      for(const sib of irmãos){
+        const r=sib.getBoundingClientRect();
+        const meio=r.top+r.height/2;
+        if(y<meio && sib.previousElementSibling!==el){ cont.insertBefore(el, sib); break; }
+        if(y>=meio && sib.nextElementSibling!==el && sib.nextElementSibling!==null){ cont.insertBefore(el, sib.nextSibling); break; }
+        if(y>=meio && sib.nextElementSibling===null){ cont.appendChild(el); break; }
+      }
+    };
+    const up=()=>{
+      document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
+      document.removeEventListener("touchmove",move); document.removeEventListener("touchend",up);
+      el.classList.remove("dragging");
+      const novaOrdem=[...cont.querySelectorAll('.card[data-card]')].map(x=>x.dataset.card);
+      S.char.ordemCards=novaOrdem; save();
+    };
+    document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+    document.addEventListener("touchmove",move,{passive:false}); document.addEventListener("touchend",up);
+  };
+  handle.addEventListener("mousedown",down);
+  handle.addEventListener("touchstart",down,{passive:false});
 }
 function applyCardOrder(){
   const cont=document.getElementById("fichaCards"); if(!cont) return;
   const ord=cardOrdem();
+  const removidos=new Set((S.char.cardsRemovidos||[]).filter(k=>ORDEM_PADRAO.includes(k)));
+  const min=new Set(S.char.cardsMin||[]);
   ord.forEach(key=>{
-    const el=cont.querySelector(`[data-card="${key}"]`);
-    if(el) cont.appendChild(el);
-  });
-  // barra de mover, só visível no modo reorganizar
-  ord.forEach((key,idx)=>{
     const el=cont.querySelector(`[data-card="${key}"]`); if(!el) return;
-    let bar=el.querySelector(".reordbar");
-    if(!bar){
-      bar=document.createElement("div"); bar.className="reordbar";
-      bar.innerHTML=`<button class="up" title="mover para cima">▲</button><button class="down" title="mover para baixo">▼</button>`;
-      bar.querySelector(".up").onclick=()=>moveCard(key,-1);
-      bar.querySelector(".down").onclick=()=>moveCard(key,1);
-      el.insertBefore(bar, el.firstChild);
+    if(removidos.has(key)){ el.style.display="none"; return; }
+    el.style.display="";
+    cont.appendChild(el);
+    el.classList.toggle("cardmin", min.has(key));
+    // controles ao estilo Windows (minimizar/restaurar + fechar) e alça de arrastar
+    let win=el.querySelector(".cardwin");
+    if(!win){
+      win=document.createElement("div"); win.className="cardwin";
+      win.innerHTML=`<button class="wmin" title="minimizar">–</button><button class="wclose" title="fechar (ocultar este quadro)">✕</button>`;
+      win.querySelector(".wmin").onclick=(ev)=>{ ev.stopPropagation(); toggleCardMin(key); };
+      win.querySelector(".wclose").onclick=(ev)=>{ ev.stopPropagation(); cardFechar(key); };
+      el.appendChild(win);
     }
-    bar.querySelector(".up").disabled=idx===0;
-    bar.querySelector(".down").disabled=idx===ord.length-1;
+    win.querySelector(".wmin").textContent = min.has(key) ? "▢" : "–";
+    win.querySelector(".wmin").title = min.has(key) ? "restaurar" : "minimizar";
+    let handle=el.querySelector(".carddrag");
+    if(!handle){
+      handle=document.createElement("div"); handle.className="carddrag"; handle.title="arraste para reorganizar";
+      handle.textContent="⠿";
+      el.appendChild(handle);
+    }
+    cardDragBind(el);
   });
-  applyCardMin();
+  renderOcultos();
 }
 
 /* ================== mapa (visualização + marcações do jogador) ================== */
