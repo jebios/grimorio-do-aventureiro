@@ -144,21 +144,30 @@ if ("serviceWorker" in navigator) {
   .card[data-card].dragging{ opacity:.55; box-shadow:0 0 0 2px var(--gold-soft), 0 6px 16px rgba(0,0,0,.25); }
   /* controles ao estilo Windows: minimizar/restaurar + fechar */
   .cardwin{
-    position:absolute; top:8px; right:8px; z-index:2; display:flex; gap:2px;
+    position:absolute; top:7px; right:7px; z-index:2; display:flex; gap:4px;
   }
   .cardwin button{
-    width:26px; height:20px; border:1px solid var(--parch-line); border-radius:2px;
-    background:#f4f1e866; color:var(--ink-soft); font-size:.72rem; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; opacity:.55; transition:opacity .15s, background .15s;
+    width:28px; height:24px; border-radius:5px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.8rem; font-weight:700; transition:transform .1s, filter .15s;
   }
-  .cardwin button:hover{ opacity:1; background:#e8e2cf; }
-  .cardwin button.wclose:hover{ background:#c0392b; color:#fff; }
+  .cardwin button.wmin{
+    border:1px solid var(--gold); background:#f0e6cf; color:#6b5227;
+  }
+  .cardwin button.wclose{
+    border:1px solid var(--blood); background:#f6dcd9; color:var(--blood);
+  }
+  .cardwin button:hover{ filter:brightness(0.95); }
+  .cardwin button:active{ transform:scale(.9); }
+  .cardwin button.wclose:hover{ background:var(--blood); color:#fff; }
   /* alça de arrastar, no canto oposto */
   .carddrag{
-    position:absolute; top:8px; left:8px; z-index:2;
-    width:24px; height:20px; display:flex; align-items:center; justify-content:center;
-    color:var(--ink-soft); opacity:.4; font-size:.85rem; cursor:grab; touch-action:none;
+    position:absolute; top:7px; left:7px; z-index:2;
+    width:26px; height:24px; display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft); background:#f4f1e8; border:1px solid var(--parch-line); border-radius:5px;
+    opacity:.7; font-size:.9rem; cursor:grab; touch-action:none; transition:opacity .15s;
   }
+  .carddrag:hover{ opacity:1; }
   .carddrag:active{ cursor:grabbing; opacity:1; }
   /* botão e painel de quadros ocultos */
   .ocultosPainel{
@@ -2495,17 +2504,27 @@ function cardDragBind(el){
     e.preventDefault();
     const cont=document.getElementById("fichaCards"); if(!cont) return;
     el.classList.add("dragging");
-    const move=m=>{
-      m.preventDefault();
-      const y=posY(m);
+    let lastY=posY(e), rafPendente=false;
+    const aplicarMovimento=()=>{
+      rafPendente=false;
+      const y=lastY;
       const irmãos=[...cont.querySelectorAll('.card[data-card]')].filter(x=>x!==el && x.style.display!=="none");
+      // acha o primeiro quadro cujo meio está ABAIXO do ponteiro — o arrastado entra logo antes dele
+      let alvo=null;
       for(const sib of irmãos){
         const r=sib.getBoundingClientRect();
-        const meio=r.top+r.height/2;
-        if(y<meio && sib.previousElementSibling!==el){ cont.insertBefore(el, sib); break; }
-        if(y>=meio && sib.nextElementSibling!==el && sib.nextElementSibling!==null){ cont.insertBefore(el, sib.nextSibling); break; }
-        if(y>=meio && sib.nextElementSibling===null){ cont.appendChild(el); break; }
+        if(y < r.top + r.height/2){ alvo=sib; break; }
       }
+      if(alvo){
+        if(el.nextElementSibling!==alvo) cont.insertBefore(el, alvo);
+      }else{
+        if(cont.lastElementChild!==el) cont.appendChild(el);
+      }
+    };
+    const move=m=>{
+      m.preventDefault();
+      lastY=posY(m);
+      if(!rafPendente){ rafPendente=true; requestAnimationFrame(aplicarMovimento); }
     };
     const up=()=>{
       document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
