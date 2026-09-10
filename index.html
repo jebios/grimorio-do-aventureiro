@@ -204,6 +204,22 @@ if ("serviceWorker" in navigator) {
     width:28px; height:28px; border-radius:6px; border:1px solid var(--blood); color:var(--blood);
     background:transparent; font-size:1rem; cursor:pointer; flex-shrink:0;
   }
+  /* ---------- inventário ---------- */
+  .invitem{ border-bottom:1px dotted var(--parch-line); padding:7px 0; }
+  .invitem .inv-top{ display:flex; align-items:center; gap:6px; }
+  .invitem .inv-qtd{ width:38px; text-align:center; padding:6px 3px; font-size:.85rem; flex-shrink:0; }
+  .invitem .inv-nome{ flex:1; min-width:0; padding:6px 8px; font-weight:600; }
+  .invitem .inv-preco{ width:64px; text-align:right; padding:6px 5px; font-size:.82rem; flex-shrink:0; }
+  .invitem .inv-chev{
+    width:22px; height:22px; border:none; background:transparent; color:var(--ink-soft);
+    font-size:.8rem; cursor:pointer; flex-shrink:0; transition:transform .15s;
+  }
+  .invitem .inv-chev.open{ transform:rotate(90deg); }
+  .invitem .inv-x{
+    width:24px; height:24px; border:1px solid var(--blood); color:var(--blood); background:transparent;
+    border-radius:5px; font-size:.85rem; cursor:pointer; flex-shrink:0;
+  }
+  .invitem .inv-desc{ margin-top:6px; min-height:50px; font-size:.86rem; }
   .magitem-row{
     display:flex; flex-direction:column; gap:2px; padding:5px 0;
     border-bottom:1px dotted var(--parch-line);
@@ -814,9 +830,10 @@ if ("serviceWorker" in navigator) {
     <textarea id="c_itensmagicosnotas" data-k="itensMagicosNotas" placeholder="Cargas restantes, condições de ativação, maldições..." style="min-height:70px"></textarea>
   </div>
 
-  <div class="card" data-card="equipamento">
-    <h2>Equipamento &amp; Tesouro</h2>
-    <textarea id="c_equip" data-k="equip" placeholder="Armadura, mochila, 15 PO..."></textarea>
+  <div class="card" data-card="inventario">
+    <h2>Inventário <span id="invTotalV" style="font-size:.68rem; color:var(--ink-soft); text-transform:none; letter-spacing:0"></span></h2>
+    <div id="invLista"></div>
+    <button class="add" onclick="invAdd()">+ item</button>
   </div>
   </div>
 </section>
@@ -992,7 +1009,7 @@ function blankEntry(){
     up:Date.now(),
     char:{nome:"",jogador:"",classe:"",nivel:1,especie:"",antecedente:"",subclasse:"",alinhamento:"",
       ca:10,desloc:"9m",hp:10,hpmax:10,hptemp:0,insp:false,dsS:0,dsF:0,atknotas:"",
-    itensMagicos:{}, itensMagicosNotas:"", retrato:"", armasMagicas:[], cardsRemovidos:[],
+    itensMagicos:{}, itensMagicosNotas:"", retrato:"", armasMagicas:[], cardsRemovidos:[], inventario:[],
       abs:{for:10,des:10,con:10,int:10,sab:10,car:10},
       profs:{}, skillExtra:{}, initExtra:0, atks:[], pets:[], spells:[], slots:{},
       moedas:{pc:0,pp:0,pe:0,po:0,pl:0}, hplog:[], turno:1,
@@ -1615,7 +1632,7 @@ function exportPDF(){
     ensure(5); doc.text("• em negrito = preparada",MX,y); y+=6; doc.setTextColor(...INK);
   }
   block(S.char.magias);
-  section("Equipamento & Tesouro");
+  section("Inventário");
   const mo=S.char.moedas||{};
   if(Object.values(mo).some(v=>v)){
     ensure(7); doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...SOFT);
@@ -1624,7 +1641,22 @@ function exportPDF(){
       .filter(([k])=>mo[k]).map(([k,s])=>`${mo[k]} ${s}`).join("   "),MX+20,y);
     y+=7;
   }
-  block(S.char.equip);
+  invMigrar();
+  if(S.char.inventario && S.char.inventario.length){
+    S.char.inventario.forEach(it=>{
+      ensure(6);
+      doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...INK);
+      const precoTxt = it.preco ? `  (${it.preco} PO/un)` : "";
+      doc.text(`${it.qtd||1}× ${it.nome||"item"}${precoTxt}`,MX,y); y+=5;
+      if(it.desc && it.desc.trim()){
+        doc.setFont("helvetica","italic"); doc.setFontSize(8.5); doc.setTextColor(...SOFT);
+        doc.splitTextToSize(it.desc.trim(),W-2*MX-8).forEach(ln=>{ ensure(5); doc.text(ln,MX+6,y); y+=4.4; });
+        doc.setTextColor(...INK); y+=1;
+      }
+    });
+  }else{
+    block("(inventário vazio)");
+  }
 
   // Anotações
   if(S.notes.length){
@@ -2100,17 +2132,20 @@ function fbPushHero(){
 }
 function fbAplicarEntrega(d){
   const rot=d.texto||"item";
-  let linha="• "+rot+(d.venda?` — comprado por ${d.totalPO||0} PO`:" — recebido do mestre");
+  // extrai "3× nome" se houver, senão qtd=1
+  const m=rot.match(/^(\d+)×\s*/);
+  const qtdRecebida = m?parseInt(m[1],10):1;
+  const nomeLimpo = m?rot.slice(m[0].length):rot;
+  let avisoSaldo="";
   if(d.venda && d.totalPO>0){
     S.char.moedas=S.char.moedas||{pc:0,pp:0,pe:0,po:0,pl:0};
     if(S.char.moedas.po>=d.totalPO){ S.char.moedas.po=Math.round((S.char.moedas.po-d.totalPO)*100)/100; }
-    else { linha+=" (saldo de PO insuficiente — acerte com o mestre)"; }
+    else { avisoSaldo=" (saldo de PO insuficiente — acerte com o mestre)"; }
   }
-  if(d.descricao && d.descricao.trim()) linha+="\n   ↳ "+d.descricao.trim();
-  S.char.equip=(S.char.equip?S.char.equip+"\n":"")+linha;
-  const eq=document.getElementById("c_equip"); if(eq) eq.value=S.char.equip;
+  const precoUnit = d.venda && d.totalPO ? Math.round((d.totalPO/qtdRecebida)*100)/100 : 0;
+  invReceberItem(nomeLimpo, qtdRecebida, precoUnit, d.descricao||"");
   renderMoedas(); save();
-  setSaveState("✦ "+rot+(d.venda?" comprado":" recebido")+" do mestre!",true);
+  setSaveState("✦ "+rot+(d.venda?" comprado":" recebido")+" do mestre!"+avisoSaldo,true);
   mostrarToastItem(rot, d.descricao, d.venda);
 }
 function mostrarToastItem(nome, descricao, venda){
@@ -2448,11 +2483,11 @@ function libAplicarPosicaoSalva(){
 
 /* ================== reordenar quadros da Ficha ================== */
 const ORDEM_PADRAO=["identidade","atributos","combate","pericias","ataques","companheiros",
-  "caracteristicas","tracos","talentos","treinamento","magias","idiomas","moedas","itensmagicos","equipamento"];
+  "caracteristicas","tracos","talentos","treinamento","magias","idiomas","moedas","itensmagicos","inventario"];
 const NOME_CARD={identidade:"Identidade",atributos:"Atributos",combate:"Combate",pericias:"Perícias",
   ataques:"Ataques",companheiros:"Companheiros",caracteristicas:"Características",tracos:"Traços de Espécie",
   talentos:"Talentos",treinamento:"Treinamento",magias:"Magias",idiomas:"Idiomas",moedas:"Moedas",
-  itensmagicos:"Itens Mágicos",equipamento:"Equipamento"};
+  itensmagicos:"Itens Mágicos",inventario:"Inventário"};
 function cardOrdem(){
   const salva=(S.char.ordemCards||[]).filter(k=>ORDEM_PADRAO.includes(k));
   const faltando=ORDEM_PADRAO.filter(k=>!salva.includes(k));
@@ -2836,6 +2871,77 @@ function figRetratoEscolher(inp){
 function figRetratoRemover(){
   S.char.retrato=""; save(); renderRetrato();
   setSaveState("voltou à silhueta padrão",true);
+}
+/* ================== inventário ================== */
+function invMigrar(){
+  if(Array.isArray(S.char.inventario)) return;
+  S.char.inventario=[];
+  if(S.char.equip && S.char.equip.trim()){
+    S.char.inventario.push({id:"iv"+Date.now(), nome:"Itens antigos (importado)", qtd:1, preco:0, desc:S.char.equip.trim()});
+  }
+}
+function invAdd(){
+  invMigrar();
+  S.char.inventario.push({id:"iv"+Date.now()+Math.random().toString(36).slice(2,5), nome:"", qtd:1, preco:0, desc:""});
+  save(); renderInventario();
+}
+function invRemover(id){
+  S.char.inventario=S.char.inventario.filter(x=>x.id!==id);
+  save(); renderInventario();
+}
+let invAbertoId=null;
+function renderInventario(){
+  const wrap=document.getElementById("invLista"); if(!wrap) return;
+  invMigrar();
+  wrap.innerHTML="";
+  if(!S.char.inventario.length){
+    wrap.innerHTML='<div class="empty" style="padding:10px 2px">Nenhum item ainda. Toque em "+ item" para começar.</div>';
+  }
+  let total=0;
+  S.char.inventario.forEach(it=>{
+    total += (Number(it.qtd)||0)*(Number(it.preco)||0);
+    const open=invAbertoId===it.id;
+    const row=document.createElement("div"); row.className="invitem";
+    row.innerHTML=`<div class="inv-top">
+        <input type="number" class="inv-qtd" min="1" title="quantidade">
+        <input type="text" class="inv-nome" placeholder="nome do item">
+        <input type="number" class="inv-preco" step="any" min="0" title="preço em PO" placeholder="PO">
+        <button class="inv-chev${open?" open":""}" title="descrição">▸</button>
+        <button class="inv-x" title="remover">✕</button>
+      </div>
+      ${open?'<textarea class="inv-desc" placeholder="Descrição, propriedades, efeitos..."></textarea>':""}`;
+    const qtd=row.querySelector(".inv-qtd"), nome=row.querySelector(".inv-nome"), preco=row.querySelector(".inv-preco");
+    qtd.value=it.qtd??1; nome.value=it.nome||""; preco.value=it.preco||"";
+    qtd.oninput=()=>{ it.qtd=Math.max(1,Number(qtd.value)||1); save(); renderInvTotal(); };
+    nome.oninput=()=>{ it.nome=nome.value; save(); };
+    preco.oninput=()=>{ it.preco=Number(preco.value)||0; save(); renderInvTotal(); };
+    row.querySelector(".inv-chev").onclick=()=>{ invAbertoId=open?null:it.id; renderInventario(); };
+    row.querySelector(".inv-x").onclick=()=>invRemover(it.id);
+    if(open){
+      const desc=row.querySelector(".inv-desc"); desc.value=it.desc||"";
+      desc.oninput=()=>{ it.desc=desc.value; save(); };
+    }
+    wrap.appendChild(row);
+  });
+  const tv=document.getElementById("invTotalV");
+  if(tv) tv.textContent = total>0 ? `— valor total: ${(Math.round(total*100)/100).toLocaleString("pt-BR")} PO` : "";
+}
+function renderInvTotal(){
+  const total=(S.char.inventario||[]).reduce((s,it)=>s+(Number(it.qtd)||0)*(Number(it.preco)||0),0);
+  const tv=document.getElementById("invTotalV");
+  if(tv) tv.textContent = total>0 ? `— valor total: ${(Math.round(total*100)/100).toLocaleString("pt-BR")} PO` : "";
+}
+function invReceberItem(nome, qtdRecebida, precoUnit, descricao){
+  invMigrar();
+  const existente=S.char.inventario.find(x=>(x.nome||"").trim().toLowerCase()===nome.trim().toLowerCase());
+  if(existente){
+    existente.qtd=(Number(existente.qtd)||0)+qtdRecebida;
+    if(descricao && !existente.desc) existente.desc=descricao;
+  }else{
+    S.char.inventario.push({id:"iv"+Date.now()+Math.random().toString(36).slice(2,5),
+      nome:nome.trim(), qtd:qtdRecebida, preco:precoUnit||0, desc:descricao||""});
+  }
+  save(); renderInventario();
 }
 function renderRetrato(){
   const svg=document.getElementById("figsilPadrao"), img=document.getElementById("figRetratoImg"), btn=document.getElementById("figRemoverBtn");
@@ -3247,7 +3353,7 @@ function whoami(){
 }
 function renderAll(){
   renderAbilities(); renderDerived(); renderDeath(); renderSkills(); renderAtks();
-  renderSlots(); renderSpells(); renderMoedas(); renderPets(); renderItensMagicos(); renderArmasMagicas(); renderRetrato(); bindFields(); renderNotes(); whoami(); fbBindUi(); applyWall(); applyCardOrder();
+  renderSlots(); renderSpells(); renderMoedas(); renderPets(); renderItensMagicos(); renderArmasMagicas(); renderInventario(); renderRetrato(); bindFields(); renderNotes(); whoami(); fbBindUi(); applyWall(); applyCardOrder();
   if(typeof dadoAplicarPosicaoSalva==="function") dadoAplicarPosicaoSalva();
   if(typeof libAplicarPosicaoSalva==="function") libAplicarPosicaoSalva();
 }
