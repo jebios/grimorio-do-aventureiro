@@ -16,6 +16,7 @@ if ("serviceWorker" in navigator) {
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <style>
   :root{
     --leather:#33201d; --leather-deep:#241413; --leather-line:#4a2f2a;
@@ -131,8 +132,8 @@ if ("serviceWorker" in navigator) {
   .toolmini-row{ display:flex; justify-content:flex-end; gap:6px; margin-bottom:10px; }
   .toolmini{
     padding:4px 10px; font-size:.7rem; border-radius:20px;
-    border:1px solid var(--parch-line); background:transparent; color:var(--ink-soft);
-    cursor:pointer; letter-spacing:.02em;
+    border:1px solid var(--parch-line); background:#f4f1e8; color:var(--ink-soft);
+    cursor:pointer; letter-spacing:.02em; box-shadow:0 1px 4px rgba(0,0,0,.15);
   }
   .toolmini.on{ border-color:var(--gold); color:var(--ink); background:#f0e6cf; }
   .card[data-card]{ position:relative; transition:box-shadow .15s; }
@@ -166,6 +167,7 @@ if ("serviceWorker" in navigator) {
     width:26px; height:24px; display:flex; align-items:center; justify-content:center;
     color:var(--ink-soft); background:#f4f1e8; border:1px solid var(--parch-line); border-radius:5px;
     opacity:.7; font-size:.9rem; cursor:grab; touch-action:none; transition:opacity .15s;
+    user-select:none; -webkit-user-select:none;
   }
   .carddrag:hover{ opacity:1; }
   .carddrag:active{ cursor:grabbing; opacity:1; }
@@ -245,7 +247,7 @@ if ("serviceWorker" in navigator) {
     background:linear-gradient(#3f2823,#33201d); border:1px solid var(--gold);
     color:var(--gold-soft); font-size:1.4rem; cursor:grab; touch-action:none;
     display:flex; align-items:center; justify-content:center;
-    box-shadow:0 6px 16px #000000aa;
+    box-shadow:0 6px 16px #000000aa; user-select:none; -webkit-user-select:none;
   }
   .dadobtn:active{ cursor:grabbing; }
   #dadoPanel{
@@ -274,7 +276,7 @@ if ("serviceWorker" in navigator) {
     background:linear-gradient(#3f2823,#33201d); border:1px solid var(--gold);
     color:var(--gold-soft); font-size:1.4rem; cursor:grab; touch-action:none;
     display:flex; align-items:center; justify-content:center;
-    box-shadow:0 6px 16px #000000aa;
+    box-shadow:0 6px 16px #000000aa; user-select:none; -webkit-user-select:none;
   }
   .libbtn:active{ cursor:grabbing; }
   #libPanel{
@@ -788,11 +790,6 @@ if ("serviceWorker" in navigator) {
     <textarea id="c_idiomas" data-k="idiomas" placeholder="Comum, Élfico, Anão, Gíria de Ladrão..." style="min-height:56px"></textarea>
   </div>
 
-  <div class="card" data-card="moedas">
-    <h2>Bolsa de Moedas</h2>
-    <div class="pills" style="grid-template-columns:repeat(5,1fr)" id="moedasRow"></div>
-  </div>
-
   <div class="card" data-card="itensmagicos">
     <h2>Itens Mágicos <span id="sintContador" style="font-size:.68rem; color:var(--ink-soft); text-transform:none; letter-spacing:0"></span></h2>
     <p style="font-size:.72rem; color:var(--ink-soft); text-align:center; margin-bottom:10px">
@@ -832,6 +829,8 @@ if ("serviceWorker" in navigator) {
 
   <div class="card" data-card="inventario">
     <h2>Inventário <span id="invTotalV" style="font-size:.68rem; color:var(--ink-soft); text-transform:none; letter-spacing:0"></span></h2>
+    <label style="margin-bottom:4px">Bolsa de Moedas</label>
+    <div class="pills" style="grid-template-columns:repeat(5,1fr); margin-bottom:12px" id="moedasRow"></div>
     <div id="invLista"></div>
     <button class="add" onclick="invAdd()">+ item</button>
   </div>
@@ -913,6 +912,21 @@ if ("serviceWorker" in navigator) {
   <button class="gbtn" style="width:100%; padding:12px" onclick="newChar()">＋ Criar novo personagem</button>
   <div id="rosterList" style="margin-top:14px"></div>
 
+  <button class="toolmini" id="configBtn" style="margin-top:14px; width:100%; padding:9px 0" onclick="toggleConfigPainel()">⚙ Configurações</button>
+  <div id="configPainel" style="display:none">
+
+  <div class="card" style="margin-top:14px">
+    <h2>Tamanho do Texto</h2>
+    <p style="font-size:.78rem; color:var(--ink-soft); text-align:center; margin-bottom:8px">
+      No computador dá pra usar o zoom do navegador — aqui no celular, ajuste direto:
+    </p>
+    <div class="mapctrl" style="background:transparent; border:none; padding:0">
+      <button onclick="zoomAjustar(-10)">－</button>
+      <button onclick="zoomAjustar(0,true)" id="zoomTxt">100%</button>
+      <button onclick="zoomAjustar(10)">＋</button>
+    </div>
+  </div>
+
   <div class="card" style="margin-top:14px">
     <h2>Ficha &amp; Backup</h2>
     <p style="font-size:.8rem; color:var(--ink-soft); text-align:center; margin-bottom:10px">
@@ -961,6 +975,8 @@ if ("serviceWorker" in navigator) {
     <label>Escurecimento do fundo</label>
     <input type="range" id="wallDim" min="40" max="95" value="82" style="width:100%">
     <input type="file" id="wallFile" accept="image/*" style="display:none" onchange="wallEscolher(this)">
+  </div>
+
   </div>
 </section>
 
@@ -1056,7 +1072,7 @@ async function load(){
     try{
       const d=JSON.parse(raw);
       R={version:2, currentId:d.currentId||null, chars:(d.chars||[]).map(migrateEntry),
-         fb:d.fb, wall:d.wall||"", wallDim:d.wallDim??82,
+         fb:d.fb, wall:d.wall||"", wallDim:d.wallDim??82, zoomPct:d.zoomPct??100,
          mapaAnotacoes:(d.mapaAnotacoes&&!Array.isArray(d.mapaAnotacoes.ops))?d.mapaAnotacoes:{}, uiPos:d.uiPos||{}};
       setSaveState("dados carregados ✧",true);
     }catch(e){ setSaveState("não consegui ler os dados salvos"); }
@@ -1745,7 +1761,7 @@ function importData(inp){
         // backup novo: galeria completa
         if(!confirm(`Restaurar a galeria com ${d.chars.length} herói(s)? Isso substitui TODOS os personagens atuais.`)) return;
         R={version:2, currentId:d.currentId||null, chars:d.chars.map(migrateEntry),
-           fb:R.fb, wall:d.wall||R.wall, wallDim:d.wallDim??R.wallDim,
+           fb:R.fb, wall:d.wall||R.wall, wallDim:d.wallDim??R.wallDim, zoomPct:d.zoomPct??R.zoomPct??100,
            mapaAnotacoes:(d.mapaAnotacoes&&!Array.isArray(d.mapaAnotacoes.ops))?d.mapaAnotacoes:(R.mapaAnotacoes&&!Array.isArray(R.mapaAnotacoes.ops)?R.mapaAnotacoes:{}), uiPos:d.uiPos||R.uiPos||{}};
         if(!R.chars.length) R.chars=[blankEntry()];
         S=R.chars.find(c=>c.id===R.currentId)||R.chars[0]; R.currentId=S.id;
@@ -1967,6 +1983,7 @@ async function contaAoLogar(user){
       contaAplicarNuvem(JSON.parse(v.dados));
     });
     contaStatus("✦ sincronizado entre seus aparelhos",true);
+    pdfSincronizarDaNuvem();   // traz PDFs salvos em outros aparelhos com esta mesma conta
   }catch(e){ contaStatus("falha ao sincronizar: "+(e.message||"")); }
 }
 (function contaAuthWatch(){
@@ -1999,7 +2016,10 @@ function fbParseCfg(txt){
   try{ const o=JSON.parse(s); return (o&&o.apiKey&&o.projectId)?o:null; }catch(e){ return null; }
 }
 let fbApp=null, fbDb=null, fbUnsub=null, fbOk=false, fbPushTimer=null, fbHeartbeat=null;
-const PRESENCA_TIMEOUT=90*1000;   // 90s sem atualizar = considerado offline
+// quando o celular acorda/volta pro app, manda sinal de vida na hora — sem esperar os 30s do heartbeat
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && fbOk) fbPushHero(); });
+window.addEventListener("focus",()=>{ if(fbOk) fbPushHero(); });
+const PRESENCA_TIMEOUT=5*60*1000;   // 5 min sem atualizar = considerado offline (celulares pausam o app em segundo plano)
 function fbStatus(t,ok){ const e=document.getElementById("fbStatus");
   if(e){ e.textContent=t; e.style.color=ok?"var(--gold)":"var(--ink-soft)"; } }
 function fbBindUi(){
@@ -2050,7 +2070,7 @@ async function fbConectar(manual){
   try{
     if(!fbApp){ fbApp=firebase.initializeApp(cfg); }
     fbDb=firebase.firestore();
-    await firebase.auth().signInAnonymously();
+    if(!firebase.auth().currentUser) await firebase.auth().signInAnonymously();   // não derruba login de conta já ativo
     const sala=S.sync.sala, heroiId=S.id;
     fbOk=true;          // conectado ANTES do primeiro envio (senão ele é ignorado)
     fbPushHero();       // envia a ficha atual imediatamente
@@ -2242,7 +2262,9 @@ function dadoAplicarPosicaoSalva(){
     const arrastavel=(handle, aoSoltarMover, aoTocar)=>{
       let moveu=false;
       const down=e=>{
+        e.preventDefault();   // impede o navegador de iniciar seleção de texto ao clicar/arrastar
         moveu=false;
+        document.body.style.userSelect="none";
         const [sx0,sy0]=pos(e);
         const sx=sx0-handle.parentElement.offsetLeft, sy=sy0-handle.parentElement.offsetTop;
         const move=m=>{
@@ -2254,13 +2276,14 @@ function dadoAplicarPosicaoSalva(){
         const up=()=>{
           document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
           document.removeEventListener("touchmove",move); document.removeEventListener("touchend",up);
+          document.body.style.userSelect="";
           if(!moveu && aoTocar) aoTocar();
         };
         document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
         document.addEventListener("touchmove",move,{passive:false}); document.addEventListener("touchend",up);
       };
       handle.addEventListener("mousedown",down);
-      handle.addEventListener("touchstart",down,{passive:true});
+      handle.addEventListener("touchstart",down,{passive:false});
     };
     arrastavel(btn, (x,y)=>{
       btn.style.left=x+"px"; btn.style.top=y+"px"; btn.style.right="auto"; btn.style.bottom="auto";
@@ -2354,6 +2377,10 @@ async function pdfDel(key){
   }catch(e){}
 }
 async function pdfIndice(){ return (await pdfGet("_index"))||[]; }
+function pdfStorageRef(id){
+  if(!contaUid || typeof firebase==="undefined" || !firebase.storage) return null;
+  try{ return firebase.storage().ref(`pdfsGrimorio/${contaUid}/${id}.pdf`); }catch(e){ return null; }
+}
 async function pdfArquivoEscolhido(inp){
   const f=inp.files&&inp.files[0]; if(!f) return;
   if(f.type!=="application/pdf" && !f.name.toLowerCase().endsWith(".pdf")){
@@ -2366,24 +2393,71 @@ async function pdfArquivoEscolhido(inp){
   await pdfSet("_index",idx);
   inp.value="";
   pdfRenderLista();
+  // se estiver logado numa conta, sobe pro Storage — assim aparece nos outros aparelhos também
+  const ref=pdfStorageRef(id);
+  if(ref){
+    try{
+      await ref.put(f, {contentType:"application/pdf", customMetadata:{nome:f.name}});
+      pdfRenderLista();
+    }catch(e){ console.warn("falha ao sincronizar PDF na nuvem:",e.message); }
+  }
 }
 async function pdfAbrir(id){
-  const f=await pdfGet(id); if(!f){ alert("Não encontrei esse arquivo."); return; }
+  let f=await pdfGet(id);
+  if(!f){
+    // não está neste aparelho ainda — tenta baixar da nuvem (conta logada)
+    const ref=pdfStorageRef(id);
+    if(!ref){ alert("Não encontrei esse arquivo neste aparelho."); return; }
+    try{
+      const url=await ref.getDownloadURL();
+      window.open(url,"_blank");
+      return;
+    }catch(e){ alert("Não encontrei esse arquivo neste aparelho nem na nuvem."); return; }
+  }
   const url=URL.createObjectURL(f);
   window.open(url,"_blank");
 }
 async function pdfRemover(id){
-  if(!confirm("Remover este PDF do aparelho?")) return;
+  if(!confirm("Remover este PDF (deste aparelho e, se estiver sincronizado, da nuvem também)?")) return;
   await pdfDel(id);
   const idx=(await pdfIndice()).filter(x=>x.id!==id);
   await pdfSet("_index",idx);
+  const ref=pdfStorageRef(id);
+  if(ref) ref.delete().catch(()=>{});
   pdfRenderLista();
+}
+async function pdfSincronizarDaNuvem(){
+  if(!contaUid || typeof firebase==="undefined" || !firebase.storage) return;
+  try{
+    const lista=await firebase.storage().ref(`pdfsGrimorio/${contaUid}`).listAll();
+    const idx=await pdfIndice();
+    const idsLocais=new Set(idx.map(x=>x.id));
+    let mudou=false;
+    for(const item of lista.items){
+      const id=item.name.replace(/\.pdf$/,"");
+      if(idsLocais.has(id)) continue;   // já tem neste aparelho
+      const meta=await item.getMetadata().catch(()=>null);
+      const nome=(meta&&meta.customMetadata&&meta.customMetadata.nome)||item.name;
+      const url=await item.getDownloadURL();
+      const blob=await (await fetch(url)).blob();
+      const file=new File([blob], nome, {type:"application/pdf"});
+      await pdfSet(id, file);
+      idx.push({id, nome, ts:(meta&&Date.parse(meta.timeCreated))||Date.now()});
+      mudou=true;
+    }
+    if(mudou){ await pdfSet("_index", idx); pdfRenderLista(); setSaveState("📄 PDFs da conta sincronizados",true); }
+  }catch(e){ console.warn("sincronização de PDFs falhou:",e.message); }
 }
 async function pdfRenderLista(){
   const el=document.getElementById("libLista"); if(!el) return;
   const idx=await pdfIndice();
   el.innerHTML="";
-  if(!idx.length){ el.innerHTML='<div class="empty" style="padding:14px 4px">Nenhum PDF adicionado ainda. Toque em "+ adicionar PDF" para escolher um arquivo do seu aparelho.</div>'; return; }
+  if(!idx.length){
+    el.innerHTML = contaUid
+      ? '<div class="empty" style="padding:14px 4px">Nenhum PDF ainda. Toque em "+ adicionar PDF" — com sua conta logada, ele aparece nos seus outros aparelhos também.</div>'
+      : '<div class="empty" style="padding:14px 4px">Nenhum PDF adicionado ainda. Toque em "+ adicionar PDF" para escolher um arquivo do seu aparelho.<br><br>Dica: entre numa conta (aba Heróis) para os PDFs sincronizarem entre seus aparelhos.</div>';
+    return;
+  }
   idx.slice().sort((a,b)=>b.ts-a.ts).forEach(it=>{
     const d=document.createElement("div"); d.className="pdfitem";
     d.innerHTML=`<span class="pdfic">📄</span><span class="pdfnome"></span>
@@ -2449,7 +2523,9 @@ function libAplicarPosicaoSalva(){
     const arrastavel=(handle, aoSoltarMover, aoTocar)=>{
       let moveu=false;
       const down=e=>{
+        e.preventDefault();   // impede o navegador de iniciar seleção de texto ao clicar/arrastar
         moveu=false;
+        document.body.style.userSelect="none";
         const [sx0,sy0]=pos(e);
         const sx=sx0-handle.parentElement.offsetLeft, sy=sy0-handle.parentElement.offsetTop;
         const move=m=>{
@@ -2461,13 +2537,14 @@ function libAplicarPosicaoSalva(){
         const up=()=>{
           document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
           document.removeEventListener("touchmove",move); document.removeEventListener("touchend",up);
+          document.body.style.userSelect="";
           if(!moveu && aoTocar) aoTocar();
         };
         document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
         document.addEventListener("touchmove",move,{passive:false}); document.addEventListener("touchend",up);
       };
       handle.addEventListener("mousedown",down);
-      handle.addEventListener("touchstart",down,{passive:true});
+      handle.addEventListener("touchstart",down,{passive:false});
     };
     arrastavel(btn, (x,y)=>{
       btn.style.left=x+"px"; btn.style.top=y+"px"; btn.style.right="auto"; btn.style.bottom="auto";
@@ -2483,10 +2560,10 @@ function libAplicarPosicaoSalva(){
 
 /* ================== reordenar quadros da Ficha ================== */
 const ORDEM_PADRAO=["identidade","atributos","combate","pericias","ataques","companheiros",
-  "caracteristicas","tracos","talentos","treinamento","magias","idiomas","moedas","itensmagicos","inventario"];
+  "caracteristicas","tracos","talentos","treinamento","magias","idiomas","itensmagicos","inventario"];
 const NOME_CARD={identidade:"Identidade",atributos:"Atributos",combate:"Combate",pericias:"Perícias",
   ataques:"Ataques",companheiros:"Companheiros",caracteristicas:"Características",tracos:"Traços de Espécie",
-  talentos:"Talentos",treinamento:"Treinamento",magias:"Magias",idiomas:"Idiomas",moedas:"Moedas",
+  talentos:"Talentos",treinamento:"Treinamento",magias:"Magias",idiomas:"Idiomas",
   itensmagicos:"Itens Mágicos",inventario:"Inventário"};
 function cardOrdem(){
   const salva=(S.char.ordemCards||[]).filter(k=>ORDEM_PADRAO.includes(k));
@@ -2523,6 +2600,16 @@ function renderOcultos(){
     row.querySelector("button").onclick=()=>cardRestaurar(key);
     painel.appendChild(row);
   });
+}
+function toggleConfigPainel(){
+  const p=document.getElementById("configPainel"); if(!p) return;
+  p.style.display = p.style.display==="block" ? "none" : "block";
+}
+function zoomAjustar(delta, resetar){
+  R.zoomPct = resetar ? 100 : Math.max(70,Math.min(160,(R.zoomPct||100)+delta));
+  document.body.style.zoom = R.zoomPct+"%";
+  const t=document.getElementById("zoomTxt"); if(t) t.textContent=R.zoomPct+"%";
+  save();
 }
 function toggleOcultosPainel(){
   const painel=document.getElementById("ocultosPainel");
@@ -2579,23 +2666,34 @@ function applyCardOrder(){
   const ord=cardOrdem();
   const removidos=new Set((S.char.cardsRemovidos||[]).filter(k=>ORDEM_PADRAO.includes(k)));
   const min=new Set(S.char.cardsMin||[]);
+  let ultimoVisivel=null;
   ord.forEach(key=>{
     const el=cont.querySelector(`[data-card="${key}"]`); if(!el) return;
     if(removidos.has(key)){ el.style.display="none"; return; }
     el.style.display="";
-    cont.appendChild(el);
+    // só reordena de verdade quando necessário — appendChild sem necessidade causa reflow e "pula" a rolagem da página
+    if(ultimoVisivel){
+      if(ultimoVisivel.nextElementSibling!==el) cont.insertBefore(el, ultimoVisivel.nextElementSibling);
+    }else{
+      if(cont.firstElementChild!==el) cont.insertBefore(el, cont.firstElementChild);
+    }
+    ultimoVisivel=el;
     el.classList.toggle("cardmin", min.has(key));
     // controles ao estilo Windows (minimizar/restaurar + fechar) e alça de arrastar
     let win=el.querySelector(".cardwin");
     if(!win){
       win=document.createElement("div"); win.className="cardwin";
-      win.innerHTML=`<button class="wmin" title="minimizar">–</button><button class="wclose" title="fechar (ocultar este quadro)">✕</button>`;
-      win.querySelector(".wmin").onclick=(ev)=>{ ev.stopPropagation(); toggleCardMin(key); };
+      win.innerHTML = key==="pericias"
+        ? `<button class="wclose" title="fechar (ocultar este quadro)">✕</button>`
+        : `<button class="wmin" title="minimizar">–</button><button class="wclose" title="fechar (ocultar este quadro)">✕</button>`;
+      const wmin=win.querySelector(".wmin"); if(wmin) wmin.onclick=(ev)=>{ ev.stopPropagation(); toggleCardMin(key); };
       win.querySelector(".wclose").onclick=(ev)=>{ ev.stopPropagation(); cardFechar(key); };
       el.appendChild(win);
     }
-    win.querySelector(".wmin").textContent = min.has(key) ? "▢" : "–";
-    win.querySelector(".wmin").title = min.has(key) ? "restaurar" : "minimizar";
+    if(win.querySelector(".wmin")){
+      win.querySelector(".wmin").textContent = min.has(key) ? "▢" : "–";
+      win.querySelector(".wmin").title = min.has(key) ? "restaurar" : "minimizar";
+    }
     let handle=el.querySelector(".carddrag");
     if(!handle){
       handle=document.createElement("div"); handle.className="carddrag"; handle.title="arraste para reorganizar";
@@ -3342,7 +3440,7 @@ function showTab(t){
 }
 async function resetAll(){
   if(!confirm("Apagar TODOS os heróis, fichas e anotações da galeria? Isso não pode ser desfeito.")) return;
-  R={version:2, currentId:null, chars:[blankEntry()], fb:R.fb, wall:R.wall, wallDim:R.wallDim, mapaAnotacoes:{}, uiPos:R.uiPos||{}};
+  R={version:2, currentId:null, chars:[blankEntry()], fb:R.fb, wall:R.wall, wallDim:R.wallDim, mapaAnotacoes:{}, uiPos:R.uiPos||{}, zoomPct:R.zoomPct||100};
   S=R.chars[0]; R.currentId=S.id;
   try{ await storDel(); }catch(e){}
   renderAll(); renderRoster(); save(); setSaveState("grimório limpo",true);
@@ -3356,6 +3454,7 @@ function renderAll(){
   renderSlots(); renderSpells(); renderMoedas(); renderPets(); renderItensMagicos(); renderArmasMagicas(); renderInventario(); renderRetrato(); bindFields(); renderNotes(); whoami(); fbBindUi(); applyWall(); applyCardOrder();
   if(typeof dadoAplicarPosicaoSalva==="function") dadoAplicarPosicaoSalva();
   if(typeof libAplicarPosicaoSalva==="function") libAplicarPosicaoSalva();
+  if(R.zoomPct && R.zoomPct!==100){ document.body.style.zoom=R.zoomPct+"%"; const t=document.getElementById("zoomTxt"); if(t) t.textContent=R.zoomPct+"%"; }
 }
 load();
 </script>
