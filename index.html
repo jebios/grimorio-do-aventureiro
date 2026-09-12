@@ -713,6 +713,8 @@ if ("serviceWorker" in navigator) {
   <div class="card" data-card="caracteristicas">
     <h2>Características</h2>
     <textarea class="big" id="c_carac" data-k="carac" placeholder="Traços de classe e subclasse: Fúria, Ataque Extra, Maestria de Armas (Topple)..."></textarea>
+    <label style="margin-top:10px">Idiomas Conhecidos</label>
+    <textarea id="c_idiomas" data-k="idiomas" placeholder="Comum, Élfico, Anão, Gíria de Ladrão..." style="min-height:56px"></textarea>
   </div>
 
   <div class="card" data-card="tracos">
@@ -783,11 +785,6 @@ if ("serviceWorker" in navigator) {
       </p>
     </div>
     <textarea id="c_magias" data-k="magias" placeholder="Anotações de magia: componentes caros, concentração ativa, usos de habilidade..." style="margin-top:10px; min-height:64px"></textarea>
-  </div>
-
-  <div class="card" data-card="idiomas">
-    <h2>Idiomas Conhecidos</h2>
-    <textarea id="c_idiomas" data-k="idiomas" placeholder="Comum, Élfico, Anão, Gíria de Ladrão..." style="min-height:56px"></textarea>
   </div>
 
   <div class="card" data-card="itensmagicos">
@@ -2560,10 +2557,10 @@ function libAplicarPosicaoSalva(){
 
 /* ================== reordenar quadros da Ficha ================== */
 const ORDEM_PADRAO=["identidade","atributos","combate","pericias","ataques","companheiros",
-  "caracteristicas","tracos","talentos","treinamento","magias","idiomas","itensmagicos","inventario"];
+  "caracteristicas","tracos","talentos","treinamento","magias","itensmagicos","inventario"];
 const NOME_CARD={identidade:"Identidade",atributos:"Atributos",combate:"Combate",pericias:"Perícias",
   ataques:"Ataques",companheiros:"Companheiros",caracteristicas:"Características",tracos:"Traços de Espécie",
-  talentos:"Talentos",treinamento:"Treinamento",magias:"Magias",idiomas:"Idiomas",
+  talentos:"Talentos",treinamento:"Treinamento",magias:"Magias",
   itensmagicos:"Itens Mágicos",inventario:"Inventário"};
 function cardOrdem(){
   const salva=(S.char.ordemCards||[]).filter(k=>ORDEM_PADRAO.includes(k));
