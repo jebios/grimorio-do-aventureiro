@@ -1737,13 +1737,26 @@ async function exportData(){
     }
   }catch(e){}
   const payload={app:"grimorio-dnd", versao:2, exportadoEm:new Date().toISOString(), dados:R, pdfs};
-  const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
+  const json=JSON.stringify(payload);
+  const fname=`backup-grimorio-${new Date().toISOString().slice(0,10)}.json`;
+  const file=new File([json], fname, {type:"application/json"});
+  const mb=(file.size/1024/1024).toFixed(1);
+  // tenta o compartilhamento nativo primeiro — o download por link falha silenciosamente
+  // em muitos apps instalados (PWA), então essa é a via mais confiável no celular
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file], title:"Backup do Grimório",
+        text:`Backup do Grimório (${mb} MB, com ${pdfs.length} PDF(s)) — guarde este arquivo com cuidado.`});
+      setSaveState(`backup compartilhado (${mb} MB) ✧`,true);
+      return;
+    }catch(e){ if(e && e.name==="AbortError") return; /* usuário cancelou */ }
+  }
+  const blob=new Blob([json],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download=`backup-grimorio-${new Date().toISOString().slice(0,10)}.json`;
+  a.download=fname;
   a.click();
   URL.revokeObjectURL(a.href);
-  const mb=(blob.size/1024/1024).toFixed(1);
   setSaveState(`backup baixado (${mb} MB, com ${pdfs.length} PDF(s)) ✧`,true);
 }
 function importData(inp){
@@ -1905,6 +1918,7 @@ async function contaEsqueciSenha(){
   if(!email){ contaStatus("digite seu e-mail acima primeiro"); return; }
   try{
     await contaFbPronto();
+    await fbEsperarAuthInicial();
     if(!firebase.auth().currentUser) await firebase.auth().signInAnonymously();
     const doc=await fbDb.collection("recGrimorio").doc(email.toLowerCase()).get();
     if(!doc.exists){
@@ -1986,10 +2000,13 @@ async function contaAoLogar(user){
 (function contaAuthWatch(){
   const tentar=()=>{
     if(typeof firebase==="undefined"){ setTimeout(tentar,800); return; }
-    contaFbPronto().then(()=>{
+    contaFbPronto().then(async ()=>{
+      const primeiro=await fbEsperarAuthInicial();
+      if(primeiro && primeiro.email){ contaAoLogar(primeiro); }
+      else{ contaUid=null; contaEmailAtual=null; contaAtualizarUI(); }
       firebase.auth().onAuthStateChanged(user=>{
         if(user && user.email){ contaAoLogar(user); }
-        else{ contaUid=null; contaEmailAtual=null; contaAtualizarUI(); }
+        else if(!user){ contaUid=null; contaEmailAtual=null; contaAtualizarUI(); }
       });
     }).catch(()=>{});
   };
@@ -2013,6 +2030,17 @@ function fbParseCfg(txt){
   try{ const o=JSON.parse(s); return (o&&o.apiKey&&o.projectId)?o:null; }catch(e){ return null; }
 }
 let fbApp=null, fbDb=null, fbUnsub=null, fbOk=false, fbPushTimer=null, fbHeartbeat=null;
+let fbAuthPronto=null;
+function fbEsperarAuthInicial(){
+  // o Firebase demora um instante pra "lembrar" a sessão salva — sem esperar isso,
+  // o app achava que ninguém estava logado e criava uma sessão anônima por cima, derrubando a conta.
+  if(!fbAuthPronto){
+    fbAuthPronto=new Promise(res=>{
+      const unsub=firebase.auth().onAuthStateChanged(user=>{ unsub(); res(user); });
+    });
+  }
+  return fbAuthPronto;
+}
 // quando o celular acorda/volta pro app, manda sinal de vida na hora — sem esperar os 30s do heartbeat
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden && fbOk) fbPushHero(); });
 window.addEventListener("focus",()=>{ if(fbOk) fbPushHero(); });
@@ -2067,6 +2095,7 @@ async function fbConectar(manual){
   try{
     if(!fbApp){ fbApp=firebase.initializeApp(cfg); }
     fbDb=firebase.firestore();
+    await fbEsperarAuthInicial();
     if(!firebase.auth().currentUser) await firebase.auth().signInAnonymously();   // não derruba login de conta já ativo
     const sala=S.sync.sala, heroiId=S.id;
     fbOk=true;          // conectado ANTES do primeiro envio (senão ele é ignorado)
