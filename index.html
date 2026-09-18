@@ -304,7 +304,8 @@ if ("serviceWorker" in navigator) {
   .pdfvbody{ flex:1; overflow:auto; padding:10px; background:#333; }
 
   .pdfvcarregando{ color:#ccc; padding:40px 20px; font-size:.9rem; }
-  .pdfvcanvas{ display:block; margin:0 auto; box-shadow:0 4px 20px rgba(0,0,0,.5); background:#fff; touch-action:auto; }
+  .pdfvstack{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .pdfvcanvas{ display:block; box-shadow:0 4px 20px rgba(0,0,0,.5); background:#fff; touch-action:auto; }
   .pdfvframe{ width:100%; height:100%; border:none; background:#fff; }
   .pdfvaviso{ color:#ccc; font-size:.8rem; text-align:center; padding:10px; }
   .pdfvnav{
@@ -2637,10 +2638,8 @@ function pdfMostrarVisualizador(blob,nome){
     </div>
     <div class="pdfvbody"><div class="pdfvcarregando">carregando documento...</div></div>
     <div class="pdfvnav" style="display:none">
-      <button class="pdfv-prev">‹</button>
-      <span class="pdfv-pag"></span>
-      <button class="pdfv-next">›</button>
       <button class="pdfv-menos">－</button>
+      <span class="pdfv-pag"></span>
       <button class="pdfv-mais">＋</button>
     </div>`;
   v.querySelector(".pdfvnome").textContent=nome;
@@ -2673,66 +2672,57 @@ function pdfCarregarPdfJs(){
 async function pdfRenderizarNoCanvas(v,blob,url){
   const body=v.querySelector(".pdfvbody");
   const nav=v.querySelector(".pdfvnav");
+  const carregando=body.querySelector(".pdfvcarregando");
   try{
     const lib=await pdfCarregarPdfJs();
     const buf=await blob.arrayBuffer();
     const doc=await lib.getDocument({data:buf}).promise;
     v._pdfDoc=doc;   // guardado aqui para poder liberar a memória ao fechar
-    let pag=1, zoom=1, larguraBase=0, alturaBase=0, tarefaAtual=null;
     const RESERVA=2;   // desenha com o dobro da resolução da tela — dá folga pra ampliar sem redesenhar
+    let zoom=1;
+    const paginas=[];   // {canvas, larguraBase, alturaBase}
     body.innerHTML="";
-    const cv=document.createElement("canvas"); cv.className="pdfvcanvas";
-    body.appendChild(cv);
-    nav.style.display="flex";
+    const wrap=document.createElement("div"); wrap.className="pdfvstack";
+    const status=document.createElement("div"); status.className="pdfvcarregando";
+    status.textContent=`carregando página 1 de ${doc.numPages}...`;
+    body.appendChild(status);
+    body.appendChild(wrap);
     const aplicarZoom=()=>{
-      // só redimensiona o que já foi desenhado — sem tocar no PDF.js, então é instantâneo
-      cv.style.width=(larguraBase*zoom)+"px";
-      cv.style.height=(alturaBase*zoom)+"px";
+      paginas.forEach(pg=>{
+        pg.canvas.style.width=(pg.larguraBase*zoom)+"px";
+        pg.canvas.style.height=(pg.alturaBase*zoom)+"px";
+      });
     };
-    const renderizarPagina=async()=>{
-      const page=await doc.getPage(pag);
-      const larguraAlvo=Math.min(body.clientWidth-16, 1400);
+    const larguraAlvo=Math.min(body.clientWidth-16, 1400);
+    for(let n=1;n<=doc.numPages;n++){
+      status.textContent=`carregando página ${n} de ${doc.numPages}...`;
+      const page=await doc.getPage(n);
       const base=page.getViewport({scale:1});
       const escalaExibicao=larguraAlvo/base.width;
       const vp=page.getViewport({scale:escalaExibicao*RESERVA});
+      const cv=document.createElement("canvas"); cv.className="pdfvcanvas";
       cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
-      larguraBase=vp.width/RESERVA; alturaBase=vp.height/RESERVA;
-      if(tarefaAtual) tarefaAtual.cancel();   // evita duas renderizações brigando pelo mesmo canvas
-      tarefaAtual=page.render({canvasContext:cv.getContext("2d"), viewport:vp});
-      try{ await tarefaAtual.promise; }catch(e){ if(e&&e.name!=="RenderingCancelledException") throw e; }
-      aplicarZoom();
-      v.querySelector(".pdfv-pag").textContent=`${pag} / ${doc.numPages}`;
-      body.scrollTop=0; body.scrollLeft=0;
-    };
-    v.querySelector(".pdfv-prev").onclick=()=>{ if(pag>1){ pag--; zoom=1; renderizarPagina(); } };
-    v.querySelector(".pdfv-next").onclick=()=>{ if(pag<doc.numPages){ pag++; zoom=1; renderizarPagina(); } };
+      const larguraBase=vp.width/RESERVA, alturaBase=vp.height/RESERVA;
+      cv.style.width=larguraBase+"px"; cv.style.height=alturaBase+"px";
+      wrap.appendChild(cv);
+      paginas.push({canvas:cv, larguraBase, alturaBase});
+      await page.render({canvasContext:cv.getContext("2d"), viewport:vp}).promise;
+    }
+    status.remove();
+    nav.style.display="flex";
+    v.querySelector(".pdfv-pag").textContent=`${doc.numPages} pág.`;
     v.querySelector(".pdfv-menos").onclick=()=>{ zoom=Math.max(0.6,zoom-0.2); aplicarZoom(); };
     v.querySelector(".pdfv-mais").onclick=()=>{ zoom=Math.min(RESERVA,zoom+0.2); aplicarZoom(); };
     v.querySelector(".pdfv-pag").onclick=()=>{
-      const n=prompt(`Ir para qual página? (1 a ${doc.numPages})`, pag);
+      const n=prompt(`Ir para qual página? (1 a ${doc.numPages})`, "1");
       const alvo=Math.round(Number(n));
-      if(alvo>=1 && alvo<=doc.numPages){ pag=alvo; zoom=1; renderizarPagina(); }
+      if(alvo>=1 && alvo<=doc.numPages) paginas[alvo-1].canvas.scrollIntoView({block:"start"});
     };
-    // arrastar o dedo pros lados também vira página — só quando não está ampliado,
-    // pra não brigar com o gesto de mover a imagem ampliada
-    let arrX=null, arrY=null;
-    cv.addEventListener("touchstart",e=>{ arrX=e.touches[0].clientX; arrY=e.touches[0].clientY; },{passive:true});
-    cv.addEventListener("touchend",e=>{
-      if(arrX===null) return;
-      const dx=e.changedTouches[0].clientX-arrX, dy=e.changedTouches[0].clientY-arrY;
-      if(zoom<=1.05 && Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
-        if(dx<0 && pag<doc.numPages){ pag++; zoom=1; renderizarPagina(); }
-        else if(dx>0 && pag>1){ pag--; zoom=1; renderizarPagina(); }
-      }
-      arrX=null;
-    },{passive:true});
-    await renderizarPagina();
   }catch(e){
     // sem o leitor (offline na primeira vez), tenta o modo embutido do navegador
     body.innerHTML=`<iframe class="pdfvframe" src="${url}"></iframe>
       <div class="pdfvaviso">Se o documento não aparecer acima, use <b>abrir fora</b> ou <b>baixar</b>.</div>`;
   }
-
 }function pdfFecharVisualizador(){
   const v=document.getElementById("pdfViewer");
   if(!v) return;
