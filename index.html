@@ -2481,7 +2481,8 @@ function libTab(v){
    O índice é RECONSTRUÍDO a partir dos próprios registros, então nunca
    dessincroniza (antes havia um "_index" separado que podia se perder). */
 let pdfDb=null;
-const PDF_LIMITE_MB=120;
+const PDF_LIMITE_MB=500;
+const PDF_AVISO_MB=150;   // acima disso, só avisa e deixa continuar
 function pdfIdb(){
   return new Promise((resolve,reject)=>{
     if(pdfDb) return resolve(pdfDb);
@@ -2561,9 +2562,10 @@ async function pdfArquivoEscolhido(inp){
   }
   const mb=f.size/1048576;
   if(mb>PDF_LIMITE_MB){
-    alert(`Este PDF tem ${mb.toFixed(0)} MB — o limite é ${PDF_LIMITE_MB} MB.\n\nPDFs muito grandes travam o aparelho. Use uma versão comprimida do arquivo.`);
+    alert(`Este PDF tem ${mb.toFixed(0)} MB — o limite é ${PDF_LIMITE_MB} MB neste aparelho.\n\nEscolha uma versão menor, ou apague algum PDF antigo para abrir espaço.`);
     return;
   }
+  if(mb>PDF_AVISO_MB && !confirm(`Este PDF tem ${mb.toFixed(0)} MB. Arquivos grandes assim podem demorar para abrir ou deixar aparelhos mais antigos lentos.\n\nContinuar mesmo assim?`)) return;
   const id="pdf"+Date.now()+Math.random().toString(36).slice(2,5);
   const doc={id, nome:f.name, ts:Date.now(), tamanho:f.size, nuvem:false, blob:f};
   try{
