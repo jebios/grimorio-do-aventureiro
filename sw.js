@@ -1,4 +1,4 @@
-const CACHE = "grimorio-v16";
+const CACHE = "grimorio-v17";
 const PRECACHE = [
   "./index.html",
   "icon-192.png",

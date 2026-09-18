@@ -2584,6 +2584,7 @@ async function pdfAbrir(id){
     try{
       const url=await ref.getDownloadURL();
       blob=await (await fetch(url)).blob();
+      if(blob.type!=="application/pdf") blob=new Blob([blob],{type:"application/pdf"});
       if(doc){ doc.blob=blob; doc.nuvem=true; await pdfSalvarDoc(doc); }
       pdfStatusLinha(id,"");
     }catch(e){ pdfStatusLinha(id,""); alert("Não encontrei este arquivo neste aparelho nem na nuvem."); return; }
@@ -2592,6 +2593,9 @@ async function pdfAbrir(id){
 }
 function pdfMostrarVisualizador(blob,nome){
   pdfFecharVisualizador();
+  // garante o tipo certo — sem isso, um PDF vindo da nuvem (ou de fontes que não marcam o tipo)
+  // aparece como "arquivo genérico" em vez de ser exibido
+  if(blob.type!=="application/pdf") blob=new Blob([blob],{type:"application/pdf"});
   const url=URL.createObjectURL(blob);
   const v=document.createElement("div"); v.id="pdfViewer";
   v.innerHTML=`<div class="pdfvhead">
@@ -2600,9 +2604,15 @@ function pdfMostrarVisualizador(blob,nome){
       <button class="gbtn ghost pdfv-dl" style="padding:5px 10px">baixar</button>
       <button class="xbtn pdfv-x" style="width:30px;height:30px">✕</button>
     </div>
-    <iframe class="pdfvframe" src="${url}"></iframe>`;
+    <div class="pdfvbody"><div class="pdfvcarregando">carregando documento...</div></div>
+    <div class="pdfvnav" style="display:none">
+      <button class="pdfv-prev">‹</button>
+      <span class="pdfv-pag"></span>
+      <button class="pdfv-next">›</button>
+      <button class="pdfv-menos">－</button>
+      <button class="pdfv-mais">＋</button>
+    </div>`;
   v.querySelector(".pdfvnome").textContent=nome;
-  // estes dois rodam direto no toque do usuário, então o navegador não bloqueia
   v.querySelector(".pdfv-ext").onclick=()=>{ window.open(url,"_blank"); };
   v.querySelector(".pdfv-dl").onclick=()=>{
     const a=document.createElement("a"); a.href=url; a.download=nome;
@@ -2611,8 +2621,57 @@ function pdfMostrarVisualizador(blob,nome){
   v.querySelector(".pdfv-x").onclick=pdfFecharVisualizador;
   v.dataset.url=url;
   document.body.appendChild(v);
+  pdfRenderizarNoCanvas(v,blob,url);
 }
-function pdfFecharVisualizador(){
+function pdfCarregarPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(window.__pdfjsPromise) return window.__pdfjsPromise;
+  window.__pdfjsPromise=new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload=()=>{
+      if(!window.pdfjsLib) return rej(new Error("pdf.js não carregou"));
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      res(window.pdfjsLib);
+    };
+    s.onerror=()=>rej(new Error("sem conexão para carregar o leitor"));
+    document.head.appendChild(s);
+  });
+  return window.__pdfjsPromise;
+}
+async function pdfRenderizarNoCanvas(v,blob,url){
+  const body=v.querySelector(".pdfvbody");
+  const nav=v.querySelector(".pdfvnav");
+  try{
+    const lib=await pdfCarregarPdfJs();
+    const buf=await blob.arrayBuffer();
+    const doc=await lib.getDocument({data:buf}).promise;
+    let pag=1, escala=1;
+    body.innerHTML="";
+    const cv=document.createElement("canvas"); cv.className="pdfvcanvas";
+    body.appendChild(cv);
+    nav.style.display="flex";
+    const desenhar=async()=>{
+      const page=await doc.getPage(pag);
+      const larguraAlvo=Math.min(body.clientWidth-16, 1400);
+      const base=page.getViewport({scale:1});
+      const vp=page.getViewport({scale:(larguraAlvo/base.width)*escala});
+      cv.width=vp.width; cv.height=vp.height;
+      await page.render({canvasContext:cv.getContext("2d"), viewport:vp}).promise;
+      v.querySelector(".pdfv-pag").textContent=`${pag} / ${doc.numPages}`;
+      body.scrollTop=0;
+    };
+    v.querySelector(".pdfv-prev").onclick=()=>{ if(pag>1){ pag--; desenhar(); } };
+    v.querySelector(".pdfv-next").onclick=()=>{ if(pag<doc.numPages){ pag++; desenhar(); } };
+    v.querySelector(".pdfv-menos").onclick=()=>{ escala=Math.max(0.5,escala-0.25); desenhar(); };
+    v.querySelector(".pdfv-mais").onclick=()=>{ escala=Math.min(4,escala+0.25); desenhar(); };
+    await desenhar();
+  }catch(e){
+    // sem o leitor (offline na primeira vez), tenta o modo embutido do navegador
+    body.innerHTML=`<iframe class="pdfvframe" src="${url}"></iframe>
+      <div class="pdfvaviso">Se o documento não aparecer acima, use <b>abrir fora</b> ou <b>baixar</b>.</div>`;
+  }
+}function pdfFecharVisualizador(){
   const v=document.getElementById("pdfViewer");
   if(!v) return;
   if(v.dataset.url) URL.revokeObjectURL(v.dataset.url);
