@@ -299,6 +299,22 @@ if ("serviceWorker" in navigator) {
   }
   .libtabs button.on{ border-color:var(--gold); color:var(--ink); font-weight:700; background:#fff9ec; }
   #libLista{ flex:1; overflow-y:auto; margin-top:8px; }
+  /* ---------- visualizador de PDF ---------- */
+  #pdfViewer{
+    position:fixed; inset:0; z-index:4500; background:#1a1a1a;
+    display:flex; flex-direction:column;
+  }
+  #pdfViewer .pdfvhead{
+    display:flex; align-items:center; gap:6px; padding:8px 10px;
+    background:#2b2b2b; border-bottom:1px solid #444; flex-shrink:0;
+  }
+  #pdfViewer .pdfvnome{
+    flex:1; min-width:0; color:#eee; font-size:.85rem; font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  #pdfViewer .pdfvhead .gbtn{ font-size:.72rem; flex-shrink:0; }
+  #pdfViewer .pdfvhead .xbtn{ flex-shrink:0; border-color:#c0392b; color:#e88; background:transparent; border-radius:5px; cursor:pointer; }
+  #pdfViewer .pdfvframe{ flex:1; width:100%; border:none; background:#333; }
   .pdfitem{ display:flex; align-items:center; gap:7px; padding:8px 2px; border-bottom:1px dotted var(--parch-line); }
   .pdfitem .pdfic{ font-size:1.2rem; flex-shrink:0; }
   .pdfitem .pdfinfo{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
@@ -2572,14 +2588,37 @@ async function pdfAbrir(id){
       pdfStatusLinha(id,"");
     }catch(e){ pdfStatusLinha(id,""); alert("Não encontrei este arquivo neste aparelho nem na nuvem."); return; }
   }
-  // abrir por link em vez de window.open: o pop-up costuma ser bloqueado em app instalado e no iPhone
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.target="_blank"; a.rel="noopener";
-  a.download=(doc&&doc.nome)||"documento.pdf";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),60000);   // libera a memória depois (antes nunca liberava)
+  pdfMostrarVisualizador(blob,(doc&&doc.nome)||"documento.pdf");
 }
+function pdfMostrarVisualizador(blob,nome){
+  pdfFecharVisualizador();
+  const url=URL.createObjectURL(blob);
+  const v=document.createElement("div"); v.id="pdfViewer";
+  v.innerHTML=`<div class="pdfvhead">
+      <span class="pdfvnome"></span>
+      <button class="gbtn ghost pdfv-ext" style="padding:5px 10px">abrir fora</button>
+      <button class="gbtn ghost pdfv-dl" style="padding:5px 10px">baixar</button>
+      <button class="xbtn pdfv-x" style="width:30px;height:30px">✕</button>
+    </div>
+    <iframe class="pdfvframe" src="${url}"></iframe>`;
+  v.querySelector(".pdfvnome").textContent=nome;
+  // estes dois rodam direto no toque do usuário, então o navegador não bloqueia
+  v.querySelector(".pdfv-ext").onclick=()=>{ window.open(url,"_blank"); };
+  v.querySelector(".pdfv-dl").onclick=()=>{
+    const a=document.createElement("a"); a.href=url; a.download=nome;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  v.querySelector(".pdfv-x").onclick=pdfFecharVisualizador;
+  v.dataset.url=url;
+  document.body.appendChild(v);
+}
+function pdfFecharVisualizador(){
+  const v=document.getElementById("pdfViewer");
+  if(!v) return;
+  if(v.dataset.url) URL.revokeObjectURL(v.dataset.url);
+  v.remove();
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") pdfFecharVisualizador(); });
 async function pdfRenomear(id){
   const doc=await pdfDoc(id); if(!doc) return;
   const novo=prompt("Nome do arquivo:",doc.nome);
