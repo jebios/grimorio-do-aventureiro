@@ -2676,52 +2676,61 @@ async function pdfRenderizarNoCanvas(v,blob,url){
     const buf=await blob.arrayBuffer();
     const doc=await lib.getDocument({data:buf}).promise;
     v._pdfDoc=doc;   // guardado aqui para poder liberar a memória ao fechar
-    let pag=1, escala=1;
+    let pag=1, zoom=1, larguraBase=0, alturaBase=0, tarefaAtual=null;
+    const RESERVA=2;   // desenha com o dobro da resolução da tela — dá folga pra ampliar sem redesenhar
     body.innerHTML="";
     const cv=document.createElement("canvas"); cv.className="pdfvcanvas";
     body.appendChild(cv);
     nav.style.display="flex";
-    const desenhar=async()=>{
+    const aplicarZoom=()=>{
+      // só redimensiona o que já foi desenhado — sem tocar no PDF.js, então é instantâneo
+      cv.style.width=(larguraBase*zoom)+"px";
+      cv.style.height=(alturaBase*zoom)+"px";
+    };
+    const renderizarPagina=async()=>{
       const page=await doc.getPage(pag);
       const larguraAlvo=Math.min(body.clientWidth-16, 1400);
       const base=page.getViewport({scale:1});
-      const vp=page.getViewport({scale:(larguraAlvo/base.width)*escala});
-      const dpr=window.devicePixelRatio||1;
-      cv.width=Math.round(vp.width*dpr); cv.height=Math.round(vp.height*dpr);
-      cv.style.width=vp.width+"px"; cv.style.height=vp.height+"px";
-      const ctx=cv.getContext("2d");
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      await page.render({canvasContext:ctx, viewport:vp}).promise;
+      const escalaExibicao=larguraAlvo/base.width;
+      const vp=page.getViewport({scale:escalaExibicao*RESERVA});
+      cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+      larguraBase=vp.width/RESERVA; alturaBase=vp.height/RESERVA;
+      if(tarefaAtual) tarefaAtual.cancel();   // evita duas renderizações brigando pelo mesmo canvas
+      tarefaAtual=page.render({canvasContext:cv.getContext("2d"), viewport:vp});
+      try{ await tarefaAtual.promise; }catch(e){ if(e&&e.name!=="RenderingCancelledException") throw e; }
+      aplicarZoom();
       v.querySelector(".pdfv-pag").textContent=`${pag} / ${doc.numPages}`;
-      body.scrollTop=0;
+      body.scrollTop=0; body.scrollLeft=0;
     };
-    v.querySelector(".pdfv-prev").onclick=()=>{ if(pag>1){ pag--; desenhar(); } };
-    v.querySelector(".pdfv-next").onclick=()=>{ if(pag<doc.numPages){ pag++; desenhar(); } };
-    v.querySelector(".pdfv-menos").onclick=()=>{ escala=Math.max(0.5,escala-0.25); desenhar(); };
-    v.querySelector(".pdfv-mais").onclick=()=>{ escala=Math.min(4,escala+0.25); desenhar(); };
+    v.querySelector(".pdfv-prev").onclick=()=>{ if(pag>1){ pag--; zoom=1; renderizarPagina(); } };
+    v.querySelector(".pdfv-next").onclick=()=>{ if(pag<doc.numPages){ pag++; zoom=1; renderizarPagina(); } };
+    v.querySelector(".pdfv-menos").onclick=()=>{ zoom=Math.max(0.6,zoom-0.2); aplicarZoom(); };
+    v.querySelector(".pdfv-mais").onclick=()=>{ zoom=Math.min(RESERVA,zoom+0.2); aplicarZoom(); };
     v.querySelector(".pdfv-pag").onclick=()=>{
       const n=prompt(`Ir para qual página? (1 a ${doc.numPages})`, pag);
       const alvo=Math.round(Number(n));
-      if(alvo>=1 && alvo<=doc.numPages){ pag=alvo; desenhar(); }
+      if(alvo>=1 && alvo<=doc.numPages){ pag=alvo; zoom=1; renderizarPagina(); }
     };
-    // arrastar o dedo pros lados também vira página — comum em leitores de PDF
+    // arrastar o dedo pros lados também vira página — só quando não está ampliado,
+    // pra não brigar com o gesto de mover a imagem ampliada
     let arrX=null, arrY=null;
     cv.addEventListener("touchstart",e=>{ arrX=e.touches[0].clientX; arrY=e.touches[0].clientY; },{passive:true});
     cv.addEventListener("touchend",e=>{
       if(arrX===null) return;
       const dx=e.changedTouches[0].clientX-arrX, dy=e.changedTouches[0].clientY-arrY;
-      if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
-        if(dx<0 && pag<doc.numPages){ pag++; desenhar(); }
-        else if(dx>0 && pag>1){ pag--; desenhar(); }
+      if(zoom<=1.05 && Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
+        if(dx<0 && pag<doc.numPages){ pag++; zoom=1; renderizarPagina(); }
+        else if(dx>0 && pag>1){ pag--; zoom=1; renderizarPagina(); }
       }
       arrX=null;
     },{passive:true});
-    await desenhar();
+    await renderizarPagina();
   }catch(e){
     // sem o leitor (offline na primeira vez), tenta o modo embutido do navegador
     body.innerHTML=`<iframe class="pdfvframe" src="${url}"></iframe>
       <div class="pdfvaviso">Se o documento não aparecer acima, use <b>abrir fora</b> ou <b>baixar</b>.</div>`;
   }
+
 }function pdfFecharVisualizador(){
   const v=document.getElementById("pdfViewer");
   if(!v) return;
