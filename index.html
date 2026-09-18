@@ -2276,11 +2276,35 @@ function dadoAbrir(){
 function dadoFechar(){
   document.getElementById("dadoPanel").style.display="none";
 }
+function uiPosDentroDaTela(btn,pos){
+  // a posição é salva por aparelho mas sincroniza pela conta — no celular,
+  // uma posição vinda do PC cairia fora da tela. Aqui ela é trazida de volta.
+  const larg=btn.offsetWidth||50, alt=btn.offsetHeight||50;
+  const x=Math.max(4,Math.min(window.innerWidth-larg-4, Number(pos.x)||0));
+  const y=Math.max(4,Math.min(window.innerHeight-alt-4, Number(pos.y)||0));
+  return {x,y};
+}
+
+(function uiBotoesSempreVisiveis(){
+  // se a tela mudar de tamanho (girar o celular, redimensionar a janela),
+  // traz os botões flutuantes de volta para dentro da área visível
+  const ajustar=()=>{
+    ["libBtn","dadoBtn","audioBar"].forEach(id=>{
+      const b=document.getElementById(id);
+      if(!b || b.style.left==="") return;
+      const p=uiPosDentroDaTela(b,{x:b.offsetLeft,y:b.offsetTop});
+      b.style.left=p.x+"px"; b.style.top=p.y+"px";
+    });
+  };
+  window.addEventListener("resize",ajustar);
+  window.addEventListener("orientationchange",()=>setTimeout(ajustar,250));
+})();
 function dadoAplicarPosicaoSalva(){
   const btn=document.getElementById("dadoBtn"); if(!btn) return;
   R.uiPos=R.uiPos||{};
   if(R.uiPos.dadoBtn&&R.uiPos.dadoBtn.x!=null){
-    btn.style.left=R.uiPos.dadoBtn.x+"px"; btn.style.top=R.uiPos.dadoBtn.y+"px";
+    const p=uiPosDentroDaTela(btn,R.uiPos.dadoBtn);
+    btn.style.left=p.x+"px"; btn.style.top=p.y+"px";
     btn.style.right="auto"; btn.style.bottom="auto";
   }
 }
@@ -2692,7 +2716,8 @@ function libAplicarPosicaoSalva(){
   const btn=document.getElementById("libBtn"); if(!btn) return;
   R.uiPos=R.uiPos||{};
   if(R.uiPos.libBtn&&R.uiPos.libBtn.x!=null){
-    btn.style.left=R.uiPos.libBtn.x+"px"; btn.style.top=R.uiPos.libBtn.y+"px";
+    const p=uiPosDentroDaTela(btn,R.uiPos.libBtn);
+    btn.style.left=p.x+"px"; btn.style.top=p.y+"px";
     btn.style.right="auto"; btn.style.bottom="auto";
   }
 }
