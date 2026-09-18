@@ -300,6 +300,37 @@ if ("serviceWorker" in navigator) {
   .libtabs button.on{ border-color:var(--gold); color:var(--ink); font-weight:700; background:#fff9ec; }
   #libLista{ flex:1; overflow-y:auto; margin-top:8px; }
   /* ---------- visualizador de PDF ---------- */
+  /* ---------- controles do leitor de PDF: grandes, para toque fácil ---------- */
+  .pdfvbody{
+    flex:1; overflow:auto; display:flex; align-items:flex-start; justify-content:center;
+    padding:10px; background:#333;
+  }
+  .pdfvcarregando{ color:#ccc; padding:40px 20px; font-size:.9rem; }
+  .pdfvcanvas{ max-width:100%; box-shadow:0 4px 20px rgba(0,0,0,.5); background:#fff; touch-action:pan-y; }
+  .pdfvframe{ width:100%; height:100%; border:none; background:#fff; }
+  .pdfvaviso{ color:#ccc; font-size:.8rem; text-align:center; padding:10px; }
+  .pdfvnav{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:12px 14px; background:#2b2b2b; border-top:1px solid #444; flex-shrink:0;
+  }
+  .pdfvnav button{
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid #555; background:#3f3f3f; color:#f0f0f0;
+    border-radius:10px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .pdfvnav button:active{ background:#555; transform:scale(.95); }
+  .pdfvnav .pdfv-prev, .pdfvnav .pdfv-next{ width:56px; height:56px; font-size:1.7rem; font-weight:700; }
+  .pdfvnav .pdfv-menos, .pdfvnav .pdfv-mais{ width:48px; height:48px; font-size:1.5rem; font-weight:700; }
+  .pdfvnav .pdfv-pag{
+    min-width:64px; text-align:center; color:#fff; font-size:1rem; font-weight:600;
+    padding:0 8px; cursor:pointer;
+  }
+  @media (max-width:420px){
+    .pdfvnav{ gap:6px; padding:10px 8px; }
+    .pdfvnav .pdfv-prev, .pdfvnav .pdfv-next{ width:52px; height:52px; }
+    .pdfvnav .pdfv-menos, .pdfvnav .pdfv-mais{ width:44px; height:44px; }
+  }
+
   #pdfViewer{
     position:fixed; inset:0; z-index:4500; background:#1a1a1a;
     display:flex; flex-direction:column;
@@ -2646,6 +2677,7 @@ async function pdfRenderizarNoCanvas(v,blob,url){
     const lib=await pdfCarregarPdfJs();
     const buf=await blob.arrayBuffer();
     const doc=await lib.getDocument({data:buf}).promise;
+    v._pdfDoc=doc;   // guardado aqui para poder liberar a memória ao fechar
     let pag=1, escala=1;
     body.innerHTML="";
     const cv=document.createElement("canvas"); cv.className="pdfvcanvas";
@@ -2665,6 +2697,23 @@ async function pdfRenderizarNoCanvas(v,blob,url){
     v.querySelector(".pdfv-next").onclick=()=>{ if(pag<doc.numPages){ pag++; desenhar(); } };
     v.querySelector(".pdfv-menos").onclick=()=>{ escala=Math.max(0.5,escala-0.25); desenhar(); };
     v.querySelector(".pdfv-mais").onclick=()=>{ escala=Math.min(4,escala+0.25); desenhar(); };
+    v.querySelector(".pdfv-pag").onclick=()=>{
+      const n=prompt(`Ir para qual página? (1 a ${doc.numPages})`, pag);
+      const alvo=Math.round(Number(n));
+      if(alvo>=1 && alvo<=doc.numPages){ pag=alvo; desenhar(); }
+    };
+    // arrastar o dedo pros lados também vira página — comum em leitores de PDF
+    let arrX=null, arrY=null;
+    cv.addEventListener("touchstart",e=>{ arrX=e.touches[0].clientX; arrY=e.touches[0].clientY; },{passive:true});
+    cv.addEventListener("touchend",e=>{
+      if(arrX===null) return;
+      const dx=e.changedTouches[0].clientX-arrX, dy=e.changedTouches[0].clientY-arrY;
+      if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
+        if(dx<0 && pag<doc.numPages){ pag++; desenhar(); }
+        else if(dx>0 && pag>1){ pag--; desenhar(); }
+      }
+      arrX=null;
+    },{passive:true});
     await desenhar();
   }catch(e){
     // sem o leitor (offline na primeira vez), tenta o modo embutido do navegador
@@ -2675,6 +2724,7 @@ async function pdfRenderizarNoCanvas(v,blob,url){
   const v=document.getElementById("pdfViewer");
   if(!v) return;
   if(v.dataset.url) URL.revokeObjectURL(v.dataset.url);
+  if(v._pdfDoc) v._pdfDoc.destroy().catch(()=>{});
   v.remove();
 }
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") pdfFecharVisualizador(); });
