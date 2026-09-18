@@ -299,9 +299,12 @@ if ("serviceWorker" in navigator) {
   }
   .libtabs button.on{ border-color:var(--gold); color:var(--ink); font-weight:700; background:#fff9ec; }
   #libLista{ flex:1; overflow-y:auto; margin-top:8px; }
-  .pdfitem{ display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px dotted var(--parch-line); }
-  .pdfitem .pdfic{ font-size:1.3rem; }
-  .pdfitem .pdfnome{ flex:1; min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pdfitem{ display:flex; align-items:center; gap:7px; padding:8px 2px; border-bottom:1px dotted var(--parch-line); }
+  .pdfitem .pdfic{ font-size:1.2rem; flex-shrink:0; }
+  .pdfitem .pdfinfo{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .pdfitem .pdfnome{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pdfitem .pdfmeta{ display:flex; align-items:center; gap:6px; font-size:.68rem; color:var(--ink-soft); }
+  .pdfitem .pdfstatus{ font-style:italic; }
   .libcat{
     font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft);
     margin:10px 0 4px; font-weight:700;
@@ -586,7 +589,7 @@ if ("serviceWorker" in navigator) {
     <button id="libTabRegras" class="on" onclick="libTab('regras')">📜 Regras</button>
     <button id="libTabPdfs" onclick="libTab('pdfs')">📄 Meus PDFs</button>
   </div>
-  <input type="text" id="libBusca" placeholder="Buscar: cego, CD, descanso, ajudar..." oninput="libRender()">
+  <input type="text" id="libBusca" placeholder="Buscar: cego, CD, descanso, ajudar..." oninput="libBuscar()">
   <button class="gbtn" id="pdfAddBtn" style="display:none; padding:9px 0; margin-bottom:2px" onclick="document.getElementById('libPdfFile').click()">+ adicionar PDF</button>
   <input type="file" id="libPdfFile" accept="application/pdf" style="display:none" onchange="pdfArquivoEscolhido(this)">
   <div id="libLista"></div>
@@ -1739,10 +1742,8 @@ async function exportData(){
   setSaveState("preparando backup (incluindo PDFs)...");
   const pdfs=[];
   try{
-    const idx=await pdfIndice();
-    for(const it of idx){
-      const f=await pdfGet(it.id);
-      if(f) pdfs.push({id:it.id, nome:it.nome, ts:it.ts, dados:await blobParaBase64(f)});
+    for(const doc of await pdfListarDocs()){
+      if(doc.blob) pdfs.push({id:doc.id, nome:doc.nome, ts:doc.ts, dados:await blobParaBase64(doc.blob)});
     }
   }catch(e){}
   const payload={app:"grimorio-dnd", versao:2, exportadoEm:new Date().toISOString(), dados:R, pdfs};
@@ -1795,16 +1796,12 @@ function importData(inp){
       if(Array.isArray(p.pdfs) && p.pdfs.length){
         for(const it of p.pdfs){
           try{
-            const resp=await fetch(it.dados);
-            const blob=await resp.blob();
-            const file=new File([blob], it.nome, {type:"application/pdf"});
-            await pdfSet(it.id, file);
+            if(await pdfDoc(it.id)) continue;   // já existe neste aparelho
+            const blob=await (await fetch(it.dados)).blob();
+            await pdfSalvarDoc({id:it.id, nome:it.nome||"documento.pdf", ts:it.ts||Date.now(),
+              tamanho:blob.size||0, nuvem:false, blob});
           }catch(e){}
         }
-        const idxAtual=await pdfIndice();
-        const idsAtuais=new Set(idxAtual.map(x=>x.id));
-        const novos=p.pdfs.filter(x=>!idsAtuais.has(x.id)).map(x=>({id:x.id, nome:x.nome, ts:x.ts||Date.now()}));
-        await pdfSet("_index",[...idxAtual,...novos]);
       }
       setSaveState("backup restaurado ✧"+(p.pdfs&&p.pdfs.length?` (+${p.pdfs.length} PDF(s))`:""),true);
     }catch(e){
@@ -2364,99 +2361,214 @@ const REFLIB=[
  {cat:"Dificuldade (CD)", n:"Muito difícil", d:"CD 25"},
  {cat:"Dificuldade (CD)", n:"Quase impossível", d:"CD 30"},
  {cat:"Descanso", n:"Descanso Curto", d:"Pelo menos 1 hora de atividade leve. Pode gastar Dados de Vida para recuperar PV."},
- {cat:"Descanso", n:"Descanso Longo", d:"Pelo menos 8 horas (até 1h de atividade leve). Recupera todos os PV, metade dos Dados de Vida (mín. 1), espaços de magia e a maioria dos recursos de classe; remove 1 nível de Exaustão."}
+ {cat:"Descanso", n:"Descanso Longo", d:"Pelo menos 8 horas (até 1h de atividade leve). Recupera todos os PV, metade dos Dados de Vida (mín. 1), espaços de magia e a maioria dos recursos de classe; remove 1 nível de Exaustão."},
+ {cat:"Condições", n:"Enfeitiçado (Encantado)", d:"Não pode atacar quem o encantou nem visá-lo com efeitos nocivos; quem encantou tem vantagem em testes sociais com você."},
+ {cat:"Condições", n:"Concentração", d:"Levar dano exige salvaguarda de CON: CD 10 ou metade do dano sofrido, o que for maior. Conjurar outra magia de concentração encerra a anterior."},
+ {cat:"Tipos de Dano", n:"Os 13 tipos", d:"Ácido, concussão (bludgeoning), cortante (slashing), perfurante (piercing), elétrico, energia (force), fogo, frio, necrótico, psíquico, radiante, trovão e veneno."},
+ {cat:"Tipos de Dano", n:"Resistência e Vulnerabilidade", d:"Resistência: dano pela metade (arredonda para baixo). Vulnerabilidade: dano dobrado. Não acumulam — aplica-se uma vez só, depois de todos os outros modificadores."},
+ {cat:"Tipos de Dano", n:"Dano Crítico", d:"Role os dados de dano duas vezes e some os modificadores uma vez só. Acerto natural 20 sempre acerta e é crítico."},
+ {cat:"Cobertura", n:"Meia cobertura", d:"+2 na CA e em salvaguardas de Destreza. Ex.: atrás de mureta, criatura no caminho."},
+ {cat:"Cobertura", n:"Três quartos", d:"+5 na CA e em salvaguardas de Destreza. Ex.: atrás de seteira ou tronco grosso."},
+ {cat:"Cobertura", n:"Cobertura total", d:"Não pode ser alvo direto de ataque ou magia — precisa de área de efeito."},
+ {cat:"Perícias por Atributo", n:"Força", d:"Atletismo."},
+ {cat:"Perícias por Atributo", n:"Destreza", d:"Acrobacia, Furtividade, Prestidigitação."},
+ {cat:"Perícias por Atributo", n:"Inteligência", d:"Arcanismo, História, Investigação, Natureza, Religião."},
+ {cat:"Perícias por Atributo", n:"Sabedoria", d:"Adestrar Animais, Intuição, Medicina, Percepção, Sobrevivência."},
+ {cat:"Perícias por Atributo", n:"Carisma", d:"Atuação, Enganação, Intimidação, Persuasão."},
+ {cat:"Morte e Cura", n:"Salvaguardas de Morte", d:"A 0 PV e inconsciente: role d20 no seu turno. 10+ é sucesso, 9- é falha. 3 sucessos estabiliza; 3 falhas mata. 20 natural: volta com 1 PV. 1 natural conta como duas falhas."},
+ {cat:"Morte e Cura", n:"Dano com 0 PV", d:"Qualquer dano sofrido a 0 PV causa 1 falha de salvaguarda de morte (2 se for crítico ou dano corpo a corpo a 1,5m)."},
+ {cat:"Morte e Cura", n:"Morte instantânea", d:"Se o dano excedente após chegar a 0 PV for igual ou maior que seu PV máximo, você morre na hora."},
+ {cat:"Morte e Cura", n:"Estabilizar", d:"Ação Ajudar com kit de curandeiro (ou magia de cura) num aliado a 0 PV: teste de Medicina CD 10 estabiliza sem gastar recursos."},
+ {cat:"Movimento", n:"Terreno difícil", d:"Cada 1,5m percorrido custa 3m de deslocamento."},
+ {cat:"Movimento", n:"Escalar, nadar e rastejar", d:"Custam o dobro do deslocamento, salvo velocidade específica de escalada/natação."},
+ {cat:"Movimento", n:"Salto", d:"Em distância: metros iguais ao valor de FOR (com 3m de corrida). Em altura: 1m + modificador de FOR (com corrida)."},
+ {cat:"Movimento", n:"Queda", d:"1d6 de concussão por 1,5m caídos, até o máximo de 20d6. Cai Caído ao aterrissar."},
+ {cat:"Viagem", n:"Ritmos de viagem", d:"Devagar: 30 km/dia (permite furtividade). Normal: 36 km/dia. Rápido: 45 km/dia (−5 na Percepção passiva)."},
+ {cat:"Viagem", n:"Marcha forçada", d:"Cada hora além de 8 exige salvaguarda de CON (CD 10 + 1 por hora extra) ou ganha 1 nível de Exaustão."},
+ {cat:"Regras Gerais", n:"Percepção Passiva", d:"10 + modificador de SAB + bônus de proficiência (se treinado). Com vantagem: +5; com desvantagem: −5."},
+ {cat:"Regras Gerais", n:"Vantagem e Desvantagem", d:"Role 2d20 e use o maior (vantagem) ou o menor (desvantagem). Nunca acumulam: uma de cada se anulam."},
+ {cat:"Regras Gerais", n:"Bônus de Proficiência", d:"Níveis 1-4: +2 • 5-8: +3 • 9-12: +4 • 13-16: +5 • 17-20: +6. Nunca se soma duas vezes ao mesmo teste."},
+ {cat:"Regras Gerais", n:"Inspiração Heroica", d:"Regra 2024: quem tem pode rerrolar qualquer d20 e deve usar o novo resultado. Só se guarda uma por vez."},
+ {cat:"Regras Gerais", n:"Ataque de Oportunidade", d:"Reação quando uma criatura visível sai do seu alcance corpo a corpo usando movimento. Um ataque, apenas. Desengajar evita."},
+ {cat:"Regras Gerais", n:"Improvisar dano", d:"Referência: queda de 1,5m ou toque em brasa = 1d10 • lava ou raio = 10d10 • tempestade de fogo = 18d10."},
+ {cat:"Objetos", n:"CA e PV de objetos", d:"Pano/papel CA 11 • madeira CA 15 • pedra CA 17 • ferro CA 19 • aço CA 21. Objeto frágil pequeno ~2 PV; resistente grande ~27+ PV."},
+ {cat:"Magia", n:"Conjurar duas magias no turno", d:"Regra 2024: você pode conjurar duas magias no mesmo turno apenas se uma delas for um truque com tempo de conjuração de ação bônus."},
+ {cat:"Magia", n:"Ritual", d:"Magias com a marca Ritual podem ser conjuradas em +10 minutos sem gastar espaço de magia."},
+ {cat:"Magia", n:"Espaços de nível superior", d:"Conjurar uma magia num círculo maior usa o espaço maior — o efeito só melhora se a magia disser 'Usando um Espaço de Nível Superior'."}
 ];
 let libView="regras";
 function libTab(v){
   libView=v;
   document.getElementById("libTabRegras").classList.toggle("on",v==="regras");
   document.getElementById("libTabPdfs").classList.toggle("on",v==="pdfs");
-  document.getElementById("libBusca").style.display=v==="regras"?"block":"none";
   document.getElementById("pdfAddBtn").style.display=v==="pdfs"?"block":"none";
+  const busca=document.getElementById("libBusca");
+  busca.placeholder = v==="regras" ? "Buscar: cego, CD, descanso, ajudar..." : "Buscar pelo nome do arquivo...";
+  busca.value="";
   if(v==="regras") libRender(); else pdfRenderLista();
 }
-/* ---- PDFs pessoais (guardados no aparelho via IndexedDB) ---- */
+
+/* ---- PDFs pessoais: um registro por arquivo, com metadados juntos ----
+   O índice é RECONSTRUÍDO a partir dos próprios registros, então nunca
+   dessincroniza (antes havia um "_index" separado que podia se perder). */
 let pdfDb=null;
+const PDF_LIMITE_MB=120;
 function pdfIdb(){
   return new Promise((resolve,reject)=>{
     if(pdfDb) return resolve(pdfDb);
-    if(!("indexedDB" in window)) return reject("sem indexedDB");
-    const req=indexedDB.open("grimorioPdfsDB",1);
-    req.onupgradeneeded=()=>{ req.result.createObjectStore("arquivos"); };
+    if(!("indexedDB" in window)) return reject(new Error("sem indexedDB"));
+    const req=indexedDB.open("grimorioPdfsDB",2);
+    req.onupgradeneeded=ev=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains("arquivos")) db.createObjectStore("arquivos");
+      if(!db.objectStoreNames.contains("docs")) db.createObjectStore("docs",{keyPath:"id"});
+    };
     req.onsuccess=()=>{ pdfDb=req.result; resolve(pdfDb); };
     req.onerror=()=>reject(req.error);
   });
 }
-async function pdfGet(key){
-  try{ const db=await pdfIdb();
-    return await new Promise((res,rej)=>{
-      const tx=db.transaction("arquivos","readonly").objectStore("arquivos").get(key);
-      tx.onsuccess=()=>res(tx.result); tx.onerror=()=>rej(tx.error);
-    });
-  }catch(e){ return null; }
+function idbReq(store,modo,fn){
+  return pdfIdb().then(db=>new Promise((res,rej)=>{
+    const tx=db.transaction(store,modo);
+    const r=fn(tx.objectStore(store));
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  }));
 }
-async function pdfSet(key,val){
-  try{ const db=await pdfIdb();
-    await new Promise((res,rej)=>{
-      const tx=db.transaction("arquivos","readwrite").objectStore("arquivos").put(val,key);
-      tx.onsuccess=()=>res(); tx.onerror=()=>rej(tx.error);
-    });
-  }catch(e){ alert("Não consegui salvar o PDF — pode ser falta de espaço no aparelho."); }
+async function pdfListarDocs(){
+  try{
+    const todos=await idbReq("docs","readonly",s=>s.getAll());
+    return (todos||[]).filter(d=>d&&d.id).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  }catch(e){ return []; }
 }
-async function pdfDel(key){
-  try{ const db=await pdfIdb();
-    await new Promise(res=>{
-      const tx=db.transaction("arquivos","readwrite").objectStore("arquivos").delete(key);
-      tx.onsuccess=()=>res(); tx.onerror=()=>res();
-    });
-  }catch(e){}
+async function pdfDoc(id){
+  try{ return await idbReq("docs","readonly",s=>s.get(id)); }catch(e){ return null; }
 }
-async function pdfIndice(){ return (await pdfGet("_index"))||[]; }
+async function pdfSalvarDoc(doc){
+  return idbReq("docs","readwrite",s=>s.put(doc));
+}
+async function pdfApagarDoc(id){
+  try{ await idbReq("docs","readwrite",s=>s.delete(id)); }catch(e){}
+  try{ await idbReq("arquivos","readwrite",s=>s.delete(id)); }catch(e){}   // limpa formato antigo também
+}
+async function pdfMigrarAntigo(){
+  // traz PDFs salvos no formato antigo (store "arquivos" + "_index") para o novo
+  try{
+    const idx=await idbReq("arquivos","readonly",s=>s.get("_index"));
+    if(!Array.isArray(idx)||!idx.length) return false;
+    for(const it of idx){
+      const blob=await idbReq("arquivos","readonly",s=>s.get(it.id)).catch(()=>null);
+      if(!blob) continue;
+      if(await pdfDoc(it.id)) continue;
+      await pdfSalvarDoc({id:it.id, nome:it.nome||"documento.pdf", ts:it.ts||Date.now(),
+        tamanho:blob.size||0, nuvem:false, blob});
+    }
+    await idbReq("arquivos","readwrite",s=>s.delete("_index"));
+    return true;
+  }catch(e){ return false; }
+}
 function pdfStorageRef(id){
   if(!contaUid || typeof firebase==="undefined" || !firebase.storage) return null;
   try{ return firebase.storage().ref(`pdfsGrimorio/${contaUid}/${id}.pdf`); }catch(e){ return null; }
 }
+function pdfTamanhoTxt(bytes){
+  if(!bytes) return "";
+  return bytes>=1048576 ? (bytes/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(bytes/1024))+" KB";
+}
+async function pdfEspacoLivreTxt(){
+  try{
+    if(!navigator.storage||!navigator.storage.estimate) return "";
+    const e=await navigator.storage.estimate();
+    if(!e.quota) return "";
+    const livre=(e.quota-(e.usage||0))/1048576;
+    return livre>1024 ? `${(livre/1024).toFixed(1)} GB livres` : `${Math.round(livre)} MB livres`;
+  }catch(e){ return ""; }
+}
 async function pdfArquivoEscolhido(inp){
-  const f=inp.files&&inp.files[0]; if(!f) return;
+  const f=inp.files&&inp.files[0];
+  inp.value="";
+  if(!f) return;
   if(f.type!=="application/pdf" && !f.name.toLowerCase().endsWith(".pdf")){
-    alert("Escolha um arquivo PDF."); inp.value=""; return;
+    alert("Escolha um arquivo PDF."); return;
+  }
+  const mb=f.size/1048576;
+  if(mb>PDF_LIMITE_MB){
+    alert(`Este PDF tem ${mb.toFixed(0)} MB — o limite é ${PDF_LIMITE_MB} MB.\n\nPDFs muito grandes travam o aparelho. Use uma versão comprimida do arquivo.`);
+    return;
   }
   const id="pdf"+Date.now()+Math.random().toString(36).slice(2,5);
-  await pdfSet(id,f);
-  const idx=await pdfIndice();
-  idx.push({id, nome:f.name, ts:Date.now()});
-  await pdfSet("_index",idx);
-  inp.value="";
-  pdfRenderLista();
-  // se estiver logado numa conta, sobe pro Storage — assim aparece nos outros aparelhos também
-  const ref=pdfStorageRef(id);
-  if(ref){
-    try{
-      await ref.put(f, {contentType:"application/pdf", customMetadata:{nome:f.name}});
-      pdfRenderLista();
-    }catch(e){ console.warn("falha ao sincronizar PDF na nuvem:",e.message); }
+  const doc={id, nome:f.name, ts:Date.now(), tamanho:f.size, nuvem:false, blob:f};
+  try{
+    await pdfSalvarDoc(doc);
+  }catch(e){
+    const livre=await pdfEspacoLivreTxt();
+    alert(e && e.name==="QuotaExceededError"
+      ? `Sem espaço no aparelho para guardar este PDF.${livre?" ("+livre+")":""}\n\nApague algum PDF antigo e tente de novo.`
+      : "Não consegui salvar o PDF neste aparelho.");
+    return;
   }
+  pdfRenderLista();
+  await pdfEnviarNuvem(doc);
+}
+async function pdfEnviarNuvem(doc){
+  const ref=pdfStorageRef(doc.id);
+  if(!ref) return;                       // sem conta logada: fica só neste aparelho
+  pdfStatusLinha(doc.id,"enviando para a nuvem... 0%");
+  try{
+    const tarefa=ref.put(doc.blob,{contentType:"application/pdf",customMetadata:{nome:doc.nome}});
+    tarefa.on("state_changed",s=>{
+      const pct=Math.round((s.bytesTransferred/s.totalBytes)*100);
+      pdfStatusLinha(doc.id,`enviando para a nuvem... ${pct}%`);
+    });
+    await tarefa;
+    doc.nuvem=true; await pdfSalvarDoc(doc);
+    pdfRenderLista();
+  }catch(e){
+    pdfStatusLinha(doc.id,"⚠ falhou o envio à nuvem — toque em ↻ para tentar de novo");
+  }
+}
+async function pdfReenviar(id){
+  const doc=await pdfDoc(id);
+  if(doc && doc.blob) await pdfEnviarNuvem(doc);
+}
+function pdfStatusLinha(id,txt){
+  const el=document.querySelector(`.pdfitem[data-id="${id}"] .pdfstatus`);
+  if(el) el.textContent=txt;
 }
 async function pdfAbrir(id){
-  let f=await pdfGet(id);
-  if(!f){
-    // não está neste aparelho ainda — tenta baixar da nuvem (conta logada)
+  const doc=await pdfDoc(id);
+  let blob=doc&&doc.blob;
+  if(!blob){
     const ref=pdfStorageRef(id);
-    if(!ref){ alert("Não encontrei esse arquivo neste aparelho."); return; }
+    if(!ref){ alert("Não encontrei este arquivo neste aparelho."); return; }
+    pdfStatusLinha(id,"baixando da nuvem...");
     try{
       const url=await ref.getDownloadURL();
-      window.open(url,"_blank");
-      return;
-    }catch(e){ alert("Não encontrei esse arquivo neste aparelho nem na nuvem."); return; }
+      blob=await (await fetch(url)).blob();
+      if(doc){ doc.blob=blob; doc.nuvem=true; await pdfSalvarDoc(doc); }
+      pdfStatusLinha(id,"");
+    }catch(e){ pdfStatusLinha(id,""); alert("Não encontrei este arquivo neste aparelho nem na nuvem."); return; }
   }
-  const url=URL.createObjectURL(f);
-  window.open(url,"_blank");
+  // abrir por link em vez de window.open: o pop-up costuma ser bloqueado em app instalado e no iPhone
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.target="_blank"; a.rel="noopener";
+  a.download=(doc&&doc.nome)||"documento.pdf";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);   // libera a memória depois (antes nunca liberava)
+}
+async function pdfRenomear(id){
+  const doc=await pdfDoc(id); if(!doc) return;
+  const novo=prompt("Nome do arquivo:",doc.nome);
+  if(novo===null) return;
+  doc.nome=(novo.trim()||doc.nome);
+  await pdfSalvarDoc(doc);
+  pdfRenderLista();
 }
 async function pdfRemover(id){
-  if(!confirm("Remover este PDF (deste aparelho e, se estiver sincronizado, da nuvem também)?")) return;
-  await pdfDel(id);
-  const idx=(await pdfIndice()).filter(x=>x.id!==id);
-  await pdfSet("_index",idx);
+  const doc=await pdfDoc(id);
+  const nome=(doc&&doc.nome)||"este PDF";
+  if(!confirm(`Remover "${nome}"?\n\nSai deste aparelho e também da nuvem, se estiver sincronizado.`)) return;
+  await pdfApagarDoc(id);
   const ref=pdfStorageRef(id);
   if(ref) ref.delete().catch(()=>{});
   pdfRenderLista();
@@ -2465,42 +2577,55 @@ async function pdfSincronizarDaNuvem(){
   if(!contaUid || typeof firebase==="undefined" || !firebase.storage) return;
   try{
     const lista=await firebase.storage().ref(`pdfsGrimorio/${contaUid}`).listAll();
-    const idx=await pdfIndice();
-    const idsLocais=new Set(idx.map(x=>x.id));
     let mudou=false;
     for(const item of lista.items){
       const id=item.name.replace(/\.pdf$/,"");
-      if(idsLocais.has(id)) continue;   // já tem neste aparelho
+      if(await pdfDoc(id)) continue;
       const meta=await item.getMetadata().catch(()=>null);
       const nome=(meta&&meta.customMetadata&&meta.customMetadata.nome)||item.name;
-      const url=await item.getDownloadURL();
-      const blob=await (await fetch(url)).blob();
-      const file=new File([blob], nome, {type:"application/pdf"});
-      await pdfSet(id, file);
-      idx.push({id, nome, ts:(meta&&Date.parse(meta.timeCreated))||Date.now()});
+      // guarda só a ficha; o arquivo em si baixa sob demanda, ao abrir
+      await pdfSalvarDoc({id, nome, ts:(meta&&Date.parse(meta.timeCreated))||Date.now(),
+        tamanho:(meta&&meta.size)||0, nuvem:true, blob:null});
       mudou=true;
     }
-    if(mudou){ await pdfSet("_index", idx); pdfRenderLista(); setSaveState("📄 PDFs da conta sincronizados",true); }
-  }catch(e){ console.warn("sincronização de PDFs falhou:",e.message); }
+    if(mudou){ pdfRenderLista(); setSaveState("📄 PDFs da conta sincronizados",true); }
+  }catch(e){ /* sem conexão ou Storage desativado: segue local */ }
 }
 async function pdfRenderLista(){
   const el=document.getElementById("libLista"); if(!el) return;
-  const idx=await pdfIndice();
+  await pdfMigrarAntigo();
+  const q=(document.getElementById("libBusca").value||"").toLowerCase();
+  let docs=await pdfListarDocs();
+  if(q) docs=docs.filter(d=>(d.nome||"").toLowerCase().includes(q));
   el.innerHTML="";
-  if(!idx.length){
-    el.innerHTML = contaUid
-      ? '<div class="empty" style="padding:14px 4px">Nenhum PDF ainda. Toque em "+ adicionar PDF" — com sua conta logada, ele aparece nos seus outros aparelhos também.</div>'
-      : '<div class="empty" style="padding:14px 4px">Nenhum PDF adicionado ainda. Toque em "+ adicionar PDF" para escolher um arquivo do seu aparelho.<br><br>Dica: entre numa conta (aba Heróis) para os PDFs sincronizarem entre seus aparelhos.</div>';
+  if(!docs.length){
+    el.innerHTML = q
+      ? '<div class="empty" style="padding:14px 4px">Nenhum PDF com esse nome.</div>'
+      : (contaUid
+        ? '<div class="empty" style="padding:14px 4px">Nenhum PDF ainda. Toque em "+ adicionar PDF" — com sua conta logada, ele aparece nos seus outros aparelhos também.</div>'
+        : '<div class="empty" style="padding:14px 4px">Nenhum PDF ainda. Toque em "+ adicionar PDF".<br><br>Dica: entre numa conta para os PDFs sincronizarem entre seus aparelhos.</div>');
     return;
   }
-  idx.slice().sort((a,b)=>b.ts-a.ts).forEach(it=>{
-    const d=document.createElement("div"); d.className="pdfitem";
-    d.innerHTML=`<span class="pdfic">📄</span><span class="pdfnome"></span>
-      <button class="gbtn ghost" style="padding:6px 10px">abrir</button>
-      <button class="xbtn" style="width:30px;height:30px">✕</button>`;
+  docs.forEach(it=>{
+    const d=document.createElement("div"); d.className="pdfitem"; d.dataset.id=it.id;
+    const selo = it.nuvem ? '<span class="pdfselo" title="sincronizado na nuvem">☁️</span>'
+                          : '<span class="pdfselo" title="só neste aparelho">📱</span>';
+    const falhou = !it.nuvem && contaUid;
+    d.innerHTML=`<span class="pdfic">📄</span>
+      <span class="pdfinfo">
+        <span class="pdfnome"></span>
+        <span class="pdfmeta">${selo}<span class="pdftam"></span><span class="pdfstatus"></span></span>
+      </span>
+      ${falhou?'<button class="gbtn ghost pdfre" style="padding:5px 8px" title="tentar enviar à nuvem">↻</button>':""}
+      <button class="gbtn ghost pdfrn" style="padding:5px 8px" title="renomear">✎</button>
+      <button class="gbtn ghost pdfop" style="padding:5px 10px">abrir</button>
+      <button class="xbtn pdfx" style="width:28px;height:28px">✕</button>`;
     d.querySelector(".pdfnome").textContent=it.nome;
-    d.querySelector(".gbtn").onclick=()=>pdfAbrir(it.id);
-    d.querySelector(".xbtn").onclick=()=>pdfRemover(it.id);
+    d.querySelector(".pdftam").textContent=pdfTamanhoTxt(it.tamanho);
+    d.querySelector(".pdfop").onclick=()=>pdfAbrir(it.id);
+    d.querySelector(".pdfrn").onclick=()=>pdfRenomear(it.id);
+    d.querySelector(".pdfx").onclick=()=>pdfRemover(it.id);
+    const re=d.querySelector(".pdfre"); if(re) re.onclick=()=>pdfReenviar(it.id);
     el.appendChild(d);
   });
 }
@@ -2532,6 +2657,9 @@ function libPosicionar(){
   x=Math.max(8,Math.min(window.innerWidth-350,x));
   panel.style.left=x+"px"; panel.style.top=y+"px";
 }
+function libBuscar(){
+  if(libView==="regras") libRender(); else pdfRenderLista();
+}
 function libAbrir(){
   libPosicionar();
   document.getElementById("libPanel").style.display="flex";
@@ -2540,6 +2668,26 @@ function libAbrir(){
 function libFechar(){
   document.getElementById("libPanel").style.display="none";
 }
+(function libExtras(){
+  const aberto=()=>{ const p=document.getElementById("libPanel"); return p && p.style.display!=="none"; };
+  // fecha com Esc
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && aberto()) libFechar(); });
+  // fecha ao tocar fora do painel (mas não no próprio botão flutuante)
+  document.addEventListener("pointerdown",e=>{
+    if(!aberto()) return;
+    if(e.target.closest("#libPanel")||e.target.closest("#libBtn")) return;
+    libFechar();
+  });
+  // mantém o painel dentro da tela ao girar o celular ou redimensionar
+  const ajustar=()=>{
+    if(!aberto()) return;
+    const p=document.getElementById("libPanel"), r=p.getBoundingClientRect();
+    p.style.left=Math.max(8,Math.min(window.innerWidth-r.width-8,r.left))+"px";
+    p.style.top =Math.max(8,Math.min(window.innerHeight-r.height-8,r.top))+"px";
+  };
+  window.addEventListener("resize",ajustar);
+  window.addEventListener("orientationchange",()=>setTimeout(ajustar,250));
+})();
 function libAplicarPosicaoSalva(){
   const btn=document.getElementById("libBtn"); if(!btn) return;
   R.uiPos=R.uiPos||{};
